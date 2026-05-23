@@ -50,6 +50,7 @@ dev = [
   "sphinx-autobuild",
   # Testing
   "pytest",
+  "pytest-rerunfailures",
   "pytest-watcher",
   # Lint / typecheck
   "ruff",
