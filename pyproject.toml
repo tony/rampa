@@ -38,6 +38,9 @@ dependencies = [
   "aiohttp>=3.9",
 ]
 
+[project.scripts]
+rampa = "rampa.cli:main"
+
 [project.urls]
 "Bug Tracker" = "https://github.com/tony/rampa/issues"
 Repository = "https://github.com/tony/rampa"
