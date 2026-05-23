@@ -8,7 +8,7 @@ Sequence: setup → execute scenarios → teardown → summary.
 from __future__ import annotations
 
 import asyncio
-import contextlib
+import logging
 import queue
 import typing as t
 from dataclasses import dataclass
@@ -26,6 +26,8 @@ from rampa.loader import TestPlan
 from rampa.metrics import MetricEngine, MetricRegistry, register_builtins
 from rampa.output import ConsoleOutput, JSONOutput, OutputManager
 from rampa.thresholds import Threshold, ThresholdResult, evaluate_thresholds, parse_threshold
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -89,32 +91,38 @@ async def run_test(
 
     abort_event = asyncio.Event()
     setup_data: t.Any = None
+    run_exit_code = ExitCode.OK
 
     try:
         if plan.setup_fn is not None:
             setup_data = await plan.setup_fn()
-
-        async with asyncio.TaskGroup() as tg:
-            for scenario_name, (scenario_config, worker_fn) in plan.scenarios.items():
-                executor = create_executor(scenario_config)
-
-                state = ExecutionState(
-                    sample_queue=sample_queue,
-                    abort_event=abort_event,
-                    worker_fn=worker_fn,
-                    scenario=scenario_name,
-                    setup_data=setup_data,
-                )
-                tg.create_task(executor.run(state))
-
     except Exception:
-        import logging
+        logger.exception("setup failed")
+        run_exit_code = ExitCode.SETUP_FAILURE
 
-        logging.getLogger(__name__).exception("executor error")
+    if run_exit_code == ExitCode.OK:
+        try:
+            async with asyncio.TaskGroup() as tg:
+                for scenario_name, (scenario_config, worker_fn) in plan.scenarios.items():
+                    executor = create_executor(scenario_config)
+
+                    state = ExecutionState(
+                        sample_queue=sample_queue,
+                        abort_event=abort_event,
+                        worker_fn=worker_fn,
+                        scenario=scenario_name,
+                        setup_data=setup_data,
+                    )
+                    tg.create_task(executor.run(state))
+        except Exception:
+            logger.exception("executor error")
+            run_exit_code = ExitCode.ITERATION_EXCEPTION
 
     if plan.teardown_fn is not None:
-        with contextlib.suppress(Exception):
+        try:
             await plan.teardown_fn()
+        except Exception:
+            logger.exception("teardown failed")
 
     engine.stop()
 
@@ -149,6 +157,11 @@ async def run_test(
             json_out.write_summary(snapshot, threshold_results)
 
     any_failed = any(not r.passed for r in threshold_results)
-    exit_code = ExitCode.THRESHOLD_FAILURE if any_failed else ExitCode.OK
+    if run_exit_code != ExitCode.OK:
+        exit_code = run_exit_code
+    elif any_failed:
+        exit_code = ExitCode.THRESHOLD_FAILURE
+    else:
+        exit_code = ExitCode.OK
 
     return RunResult(exit_code=exit_code, threshold_results=threshold_results)
