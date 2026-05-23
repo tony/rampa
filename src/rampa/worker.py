@@ -14,6 +14,7 @@ import typing as t
 from dataclasses import dataclass
 
 from rampa._types import Sample, make_sample
+from rampa.http import HttpClient
 
 
 @dataclass(frozen=True)
@@ -65,6 +66,10 @@ class Worker:
         self._queue = sample_queue
         self.execution = execution
         self.setup_data = setup_data
+        self.http = HttpClient(
+            sample_queue,
+            {"scenario": execution.scenario},
+        )
 
     def _emit(self, sample: Sample) -> None:
         """Push a sample to the metric engine queue."""
