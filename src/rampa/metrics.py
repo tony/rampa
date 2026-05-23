@@ -398,12 +398,21 @@ class MetricSnapshot:
 _BUILTIN_METRICS: list[tuple[str, MetricType, ValueType]] = [
     ("iterations", MetricType.COUNTER, ValueType.DEFAULT),
     ("iteration_duration", MetricType.TREND, ValueType.TIME),
+    ("iteration_errors", MetricType.COUNTER, ValueType.DEFAULT),
     ("dropped_iterations", MetricType.COUNTER, ValueType.DEFAULT),
     ("vus", MetricType.GAUGE, ValueType.DEFAULT),
     ("vus_max", MetricType.GAUGE, ValueType.DEFAULT),
     ("checks", MetricType.RATE, ValueType.DEFAULT),
     ("data_sent", MetricType.COUNTER, ValueType.DATA),
     ("data_received", MetricType.COUNTER, ValueType.DATA),
+    ("http_reqs", MetricType.COUNTER, ValueType.DEFAULT),
+    ("http_req_duration", MetricType.TREND, ValueType.TIME),
+    ("http_req_failed", MetricType.RATE, ValueType.DEFAULT),
+    ("http_req_blocked", MetricType.TREND, ValueType.TIME),
+    ("http_req_connecting", MetricType.TREND, ValueType.TIME),
+    ("http_req_sending", MetricType.TREND, ValueType.TIME),
+    ("http_req_waiting", MetricType.TREND, ValueType.TIME),
+    ("http_req_receiving", MetricType.TREND, ValueType.TIME),
 ]
 
 
