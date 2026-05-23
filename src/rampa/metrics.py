@@ -13,6 +13,7 @@ import math
 import queue
 import threading
 import time
+import typing as t
 from dataclasses import dataclass, field
 
 from rampa._types import MetricType, Sample, ValueType
@@ -449,6 +450,7 @@ class MetricEngine:
     registry: MetricRegistry
     sample_queue: queue.SimpleQueue[Sample | None]
     flush_interval: float = 0.05
+    on_sample: t.Callable[[Sample], None] | None = None
     _thread: threading.Thread = field(init=False, repr=False)
     _running: bool = field(init=False, default=False, repr=False)
     _start_time: float = field(init=False, default=0.0, repr=False)
@@ -517,6 +519,8 @@ class MetricEngine:
                 self._ingest(sample)
 
     def _ingest(self, sample: Sample) -> None:
+        if self.on_sample is not None:
+            self.on_sample(sample)
         sink = self.registry.get_sink(sample.metric)
         if sink is None:
             self.registry.get_or_create(
