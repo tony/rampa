@@ -267,8 +267,31 @@ class TrendSink:
         }
 
 
-Sink = CounterSink | GaugeSink | RateSink | TrendSink
-"""Union type for all metric sink implementations."""
+class SinkProtocol(t.Protocol):
+    """Structural protocol for metric sink implementations.
+
+    Enables future Rust PyO3 sinks to satisfy the interface without
+    appearing in a union type.
+
+    >>> class DummySink:
+    ...     def add(self, value: float) -> None: ...
+    ...     def format(self, duration: float) -> dict[str, float]:
+    ...         return {}
+    >>> hasattr(DummySink, "add") and hasattr(DummySink, "format")
+    True
+    """
+
+    def add(self, value: float) -> None:
+        """Record an observation."""
+        ...
+
+    def format(self, duration: float) -> dict[str, float]:
+        """Return aggregated values."""
+        ...
+
+
+Sink = SinkProtocol
+"""Type alias for metric sink implementations."""
 
 
 def create_sink(metric_type: MetricType) -> Sink:
