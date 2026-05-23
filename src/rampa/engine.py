@@ -222,6 +222,10 @@ class Engine:
                 )
             )
 
+        from rampa.context import run_id_var
+
+        run_id_var.set(run_id)
+
         try:
             setup_data: t.Any = None
 
