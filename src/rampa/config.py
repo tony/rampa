@@ -80,9 +80,14 @@ Duration = t.Annotated[datetime.timedelta, BeforeValidator(parse_duration)]
 class Stage(BaseModel, frozen=True):
     """A single ramp stage with a target VU or rate count and duration.
 
-    >>> Stage(duration="30s", target=100).target
+    >>> import datetime
+    >>> Stage(
+    ...     duration=datetime.timedelta(seconds=30), target=100,
+    ... ).target
     100
-    >>> Stage(duration="1m", target=0).duration
+    >>> Stage(
+    ...     duration=datetime.timedelta(minutes=1), target=0,
+    ... ).duration
     datetime.timedelta(seconds=60)
     """
 
@@ -97,7 +102,12 @@ class ScenarioConfig(BaseModel):
     scheduled. Executor-specific fields are validated by the executor, not by
     this model.
 
-    >>> cfg = ScenarioConfig(executor="constant-vus", vus=10, duration="30s")
+    >>> import datetime
+    >>> cfg = ScenarioConfig(
+    ...     executor="constant-vus",
+    ...     vus=10,
+    ...     duration=datetime.timedelta(seconds=30),
+    ... )
     >>> cfg.executor
     'constant-vus'
     >>> cfg.vus
@@ -127,7 +137,10 @@ class Options(BaseModel):
     cases. When both shortcuts and ``scenarios`` are provided, validation
     rejects the config.
 
-    >>> Options(vus=10, duration="30s").vus
+    >>> import datetime
+    >>> Options(
+    ...     vus=10, duration=datetime.timedelta(seconds=30),
+    ... ).vus
     10
     """
 
@@ -146,9 +159,12 @@ class Config(BaseModel):
     Either ``scenarios`` or shortcut options (``vus``, ``duration``, etc.) may
     be provided, but not both.
 
+    >>> import datetime
     >>> cfg = Config(
     ...     scenarios={"smoke": ScenarioConfig(
-    ...         executor="constant-vus", vus=1, duration="10s",
+    ...         executor="constant-vus",
+    ...         vus=1,
+    ...         duration=datetime.timedelta(seconds=10),
     ...     )},
     ... )
     >>> "smoke" in cfg.scenarios
