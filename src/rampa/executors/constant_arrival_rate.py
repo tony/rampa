@@ -10,7 +10,7 @@ silently reducing the request rate.
 from __future__ import annotations
 
 import asyncio
-import contextlib
+import logging
 import time
 
 from rampa._types import make_sample
@@ -105,8 +105,20 @@ class ConstantArrivalRateExecutor:
         worker = state.make_worker()
         start = time.monotonic_ns()
         try:
-            with contextlib.suppress(Exception):
+            try:
                 await state.worker_fn(worker)
+            except Exception:
+                logging.getLogger(__name__).warning(
+                    "iteration %d failed",
+                    worker.execution.iteration,
+                )
+                state.sample_queue.put(
+                    make_sample(
+                        "iteration_errors",
+                        1.0,
+                        {"scenario": state.scenario},
+                    ),
+                )
         finally:
             elapsed_ns = time.monotonic_ns() - start
             state.sample_queue.put(

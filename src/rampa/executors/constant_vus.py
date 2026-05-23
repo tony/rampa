@@ -9,7 +9,7 @@ iteration to complete before starting the next one.
 from __future__ import annotations
 
 import asyncio
-import contextlib
+import logging
 import time
 
 from rampa._types import make_sample
@@ -62,8 +62,20 @@ class ConstantVUsExecutor:
         while loop.time() < deadline and not state.abort_event.is_set():
             worker = state.make_worker()
             start = time.monotonic_ns()
-            with contextlib.suppress(Exception):
+            try:
                 await state.worker_fn(worker)
+            except Exception:
+                logging.getLogger(__name__).warning(
+                    "iteration %d failed",
+                    worker.execution.iteration,
+                )
+                state.sample_queue.put(
+                    make_sample(
+                        "iteration_errors",
+                        1.0,
+                        {"scenario": state.scenario},
+                    ),
+                )
             elapsed_ns = time.monotonic_ns() - start
             state.sample_queue.put(
                 make_sample("iterations", 1.0, {"scenario": state.scenario}),
