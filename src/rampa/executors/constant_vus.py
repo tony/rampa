@@ -56,8 +56,8 @@ class ConstantVUsExecutor:
 
     async def _run_vu(self, state: ExecutionState) -> None:
         """Single VU loop: iterate until duration expires or abort."""
-        deadline = asyncio.get_event_loop().time() + self._duration
-        loop = asyncio.get_event_loop()
+        deadline = asyncio.get_running_loop().time() + self._duration
+        loop = asyncio.get_running_loop()
 
         while loop.time() < deadline and not state.abort_event.is_set():
             worker = state.make_worker()
