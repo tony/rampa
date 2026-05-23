@@ -501,6 +501,7 @@ name = "rampa"
 version = "0.0.0"
 source = { editable = "." }
 dependencies = [
+    { name = "click" },
     { name = "pydantic" },
 ]
 
@@ -521,7 +522,10 @@ docs = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "pydantic", specifier = ">=2.0" }]
+requires-dist = [
+    { name = "click", specifier = ">=8.0" },
+    { name = "pydantic", specifier = ">=2.0" },
+]
 
 [package.metadata.requires-dev]
 dev = [
