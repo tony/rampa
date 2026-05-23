@@ -13,6 +13,12 @@ import queue
 import typing as t
 from dataclasses import dataclass
 
+import rampa.executors.constant_arrival_rate as _car  # noqa: F401
+import rampa.executors.constant_vus as _cv  # noqa: F401
+import rampa.executors.per_vu_iterations as _pvi  # noqa: F401
+import rampa.executors.ramping_arrival_rate as _rar  # noqa: F401
+import rampa.executors.ramping_vus as _rv  # noqa: F401
+import rampa.executors.shared_iterations as _si  # noqa: F401
 from rampa._types import Sample
 from rampa.errors import ExitCode
 from rampa.executors import ExecutionState, create_executor
@@ -60,8 +66,13 @@ async def run_test(
     register_builtins(registry)
 
     sample_queue: queue.SimpleQueue[Sample | None] = queue.SimpleQueue()
+    output_samples: list[Sample] = []
 
-    engine = MetricEngine(registry=registry, sample_queue=sample_queue)
+    engine = MetricEngine(
+        registry=registry,
+        sample_queue=sample_queue,
+        on_sample=output_samples.append,
+    )
     engine.start()
 
     output_mgr = OutputManager()
@@ -84,7 +95,6 @@ async def run_test(
             setup_data = await plan.setup_fn()
 
         async with asyncio.TaskGroup() as tg:
-            _ensure_executor_imports()
             for scenario_name, (scenario_config, worker_fn) in plan.scenarios.items():
                 executor = create_executor(scenario_config)
 
@@ -98,13 +108,18 @@ async def run_test(
                 tg.create_task(executor.run(state))
 
     except Exception:
-        pass
+        import logging
+
+        logging.getLogger(__name__).exception("executor error")
 
     if plan.teardown_fn is not None:
         with contextlib.suppress(Exception):
             await plan.teardown_fn()
 
     engine.stop()
+
+    output_mgr.buffer_samples(output_samples)
+    await output_mgr.flush()
 
     snapshot = engine.get_latest_snapshot()
     threshold_results: list[ThresholdResult] = []
@@ -125,19 +140,15 @@ async def run_test(
             snapshot.duration,
         )
 
+    await output_mgr.stop_all()
+
     if snapshot:
         if console:
             console.render_summary(snapshot, threshold_results)
         if json_out:
             json_out.write_summary(snapshot, threshold_results)
 
-    await output_mgr.stop_all()
-
     any_failed = any(not r.passed for r in threshold_results)
     exit_code = ExitCode.THRESHOLD_FAILURE if any_failed else ExitCode.OK
 
     return RunResult(exit_code=exit_code, threshold_results=threshold_results)
-
-
-def _ensure_executor_imports() -> None:
-    """Import all executor modules to trigger registration."""
