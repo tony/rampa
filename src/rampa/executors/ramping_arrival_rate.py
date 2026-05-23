@@ -58,7 +58,7 @@ class RampingArrivalRateExecutor:
         """
         sem = asyncio.Semaphore(self._max_vus)
         current_rate = self._start_rate
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
 
         async with asyncio.TaskGroup() as tg:
             for stage in self._stages:
@@ -91,6 +91,7 @@ class RampingArrivalRateExecutor:
                                 {"scenario": state.scenario},
                             ),
                         )
+                        await asyncio.sleep(0)
                     else:
                         await sem.acquire()
                         tg.create_task(self._run_iteration(state, sem))

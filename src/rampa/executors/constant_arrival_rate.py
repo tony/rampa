@@ -61,11 +61,10 @@ class ConstantArrivalRateExecutor:
             Shared execution state.
         """
         interval = self._time_unit / self._rate
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         start = loop.time()
         sem = asyncio.Semaphore(self._max_vus)
         tick = 0
-        dropped = 0
 
         async with asyncio.TaskGroup() as tg:
             while not state.abort_event.is_set():
@@ -80,7 +79,6 @@ class ConstantArrivalRateExecutor:
                     await asyncio.sleep(target_time - now)
 
                 if sem.locked():
-                    dropped += 1
                     state.sample_queue.put(
                         make_sample(
                             "dropped_iterations",
@@ -88,6 +86,7 @@ class ConstantArrivalRateExecutor:
                             {"scenario": state.scenario},
                         ),
                     )
+                    await asyncio.sleep(0)
                 else:
                     await sem.acquire()
                     tg.create_task(
