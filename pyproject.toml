@@ -32,7 +32,9 @@ include = [
   { path = "conftest.py", format = "sdist" },
 ]
 
-dependencies = []
+dependencies = [
+  "pydantic>=2.0",
+]
 
 [project.urls]
 "Bug Tracker" = "https://github.com/tony/rampa/issues"
