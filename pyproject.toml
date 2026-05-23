@@ -1,0 +1,193 @@
+[project]
+name = "rampa"
+version = "0.0.0"
+description = "Load testing framework"
+requires-python = ">=3.14,<4.0"
+authors = [
+  {name = "Tony Narlock", email = "tony@git-pull.com"}
+]
+license = { text = "MIT" }
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: POSIX",
+  "Operating System :: MacOS :: MacOS X",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Software Development :: Testing",
+  "Topic :: System :: Benchmark",
+  "Typing :: Typed",
+]
+
+keywords = ["load-test", "benchmark", "http", "testing"]
+packages = [
+  { include = "*", from = "src" },
+]
+include = [
+  { path = "tests", format = "sdist" },
+  { path = "docs", format = "sdist" },
+  { path = "conftest.py", format = "sdist" },
+]
+
+dependencies = []
+
+[project.urls]
+"Bug Tracker" = "https://github.com/tony/rampa/issues"
+Repository = "https://github.com/tony/rampa"
+
+[dependency-groups]
+dev = [
+  # Docs
+  "gp-sphinx==0.0.1a20",
+  "sphinx-autodoc-api-style==0.0.1a20",
+  "sphinx-autobuild",
+  # Testing
+  "pytest",
+  "pytest-watcher",
+  # Lint / typecheck
+  "ruff",
+  "ty>=0.0.35",
+]
+docs = [
+  "gp-sphinx==0.0.1a20",
+  "sphinx-autodoc-api-style==0.0.1a20",
+  "sphinx-autobuild",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv.exclude-newer-package]
+gp-furo-theme = false
+gp-sphinx = false
+sphinx-autodoc-api-style = false
+sphinx-autodoc-docutils = false
+sphinx-autodoc-pytest-fixtures = false
+sphinx-autodoc-sphinx = false
+sphinx-autodoc-typehints-gp = false
+sphinx-fonts = false
+sphinx-gp-opengraph = false
+sphinx-gp-sitemap = false
+sphinx-gp-theme = false
+sphinx-ux-autodoc-layout = false
+sphinx-ux-badges = false
+
+[tool.ty.environment]
+python-version = "3.14"
+
+[tool.ty.src]
+include = [
+  "src",
+  "tests",
+]
+
+[tool.ty.terminal]
+error-on-warning = true
+
+[tool.coverage.run]
+branch = true
+parallel = true
+omit = [
+  "docs/conf.py",
+  "tests/test_*.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+exclude_lines = [
+  "pragma: no cover",
+  "def __repr__",
+  "raise NotImplementedError",
+  "return NotImplemented",
+  "def parse_args",
+  "if TYPE_CHECKING:",
+  "if t.TYPE_CHECKING:",
+  "@overload( |$)",
+  'class .*\bProtocol\):',
+  "from __future__ import annotations",
+  "import typing as t",
+  "^\\s*\\.\\.\\.$",
+  "^\\s*pass$",
+  "^\\s*assert ",
+  "^\\s*logger\\s*=",
+  "^import ",
+  "^from .* import",
+  ": TypeAlias = ",
+  "= t\\.TypeVar\\(",
+]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+  "E", # pycodestyle
+  "F", # pyflakes
+  "I", # isort
+  "UP", # pyupgrade
+  "A", # flake8-builtins
+  "B", # flake8-bugbear
+  "C4", # flake8-comprehensions
+  "COM", # flake8-commas
+  "EM", # flake8-errmsg
+  "Q", # flake8-quotes
+  "PTH", # flake8-use-pathlib
+  "SIM", # flake8-simplify
+  "TRY", # Trycertatops
+  "PERF", # Perflint
+  "RUF", # Ruff-specific rules
+  "D", # pydocstyle
+  "FA100",  # future annotations
+]
+ignore = [
+  "COM812", # missing trailing comma, ruff format conflict
+]
+extend-safe-fixes = [
+  "UP006",
+  "UP007",
+]
+pyupgrade.keep-runtime-typing = false
+
+[tool.ruff.lint.isort]
+known-first-party = [
+  "rampa",
+]
+combine-as-imports = true
+required-imports = [
+  "from __future__ import annotations",
+]
+
+[tool.ruff.lint.flake8-builtins]
+builtins-allowed-modules = [
+  "dataclasses",
+  "random",
+  "types",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.per-file-ignores]
+"*/__init__.py" = ["F401"]
+
+[tool.pytest.ini_options]
+addopts = [
+  "--tb=short",
+  "--no-header",
+  "--showlocals",
+  "--doctest-modules",
+]
+doctest_optionflags = [
+  "ELLIPSIS",
+  "NORMALIZE_WHITESPACE",
+]
+testpaths = [
+  "src/rampa",
+  "tests",
+]
