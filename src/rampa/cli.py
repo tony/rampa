@@ -66,7 +66,9 @@ def run(
             scenario: plan.scenarios[scenario],
         }
 
+    from rampa.runner import status_to_exit_code
+
     result = asyncio.run(
         run_test(plan, json_output_path=json_output, quiet=quiet),
     )
-    sys.exit(result.exit_code)
+    sys.exit(status_to_exit_code(result.status))

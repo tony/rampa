@@ -13,7 +13,7 @@ import typing as t
 
 from aiohttp import web
 
-from rampa.errors import ExitCode
+from rampa.events import RunStatus
 from rampa.loader import load_test
 from rampa.runner import run_test
 
@@ -52,7 +52,7 @@ def test_e2e_passing_test(tmp_path: t.Any) -> None:
     """)
     )
 
-    async def _run() -> tuple[ExitCode, dict[str, t.Any]]:
+    async def _run() -> tuple[RunStatus, dict[str, t.Any]]:
         server_runner, port = await _start_test_server()
         try:
             final_script = tmp_path / "test_final.py"
@@ -66,12 +66,12 @@ def test_e2e_passing_test(tmp_path: t.Any) -> None:
 
             with pathlib.Path(json_path).open() as f:
                 data = json.load(f)
-            return result.exit_code, data
+            return result.status, data
         finally:
             await server_runner.cleanup()
 
-    exit_code, data = asyncio.run(_run())
-    assert exit_code == ExitCode.OK
+    status, data = asyncio.run(_run())
+    assert status == RunStatus.PASSED
     assert "summary" in data
     assert "samples" in data
     assert len(data["samples"]) > 0
@@ -99,7 +99,7 @@ def test_e2e_failing_threshold(tmp_path: t.Any) -> None:
     """)
     )
 
-    async def _run() -> ExitCode:
+    async def _run() -> RunStatus:
         server_runner, port = await _start_test_server()
         try:
             final_script = tmp_path / "test_final_fail.py"
@@ -108,9 +108,9 @@ def test_e2e_failing_threshold(tmp_path: t.Any) -> None:
             )
             plan = load_test(str(final_script))
             result = await run_test(plan, quiet=True)
-            return result.exit_code
+            return result.status
         finally:
             await server_runner.cleanup()
 
-    exit_code = asyncio.run(_run())
-    assert exit_code == ExitCode.THRESHOLD_FAILURE
+    status = asyncio.run(_run())
+    assert status == RunStatus.THRESHOLD_FAILED

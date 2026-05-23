@@ -1,46 +1,31 @@
-"""Test runner — orchestrates the full load test lifecycle.
+"""Test runner — compatibility wrapper over the headless engine.
 
-Sequence: setup → execute scenarios → teardown → summary.
+This module preserves the ``run_test()`` API for the CLI while delegating
+to ``Engine``/``RunController`` internally.
 
 >>> import rampa.runner
 """
 
 from __future__ import annotations
 
-import asyncio
 import logging
-import queue
-import typing as t
-from dataclasses import dataclass
 
-import rampa.executors.constant_arrival_rate as _car  # noqa: F401
-import rampa.executors.constant_vus as _cv  # noqa: F401
-import rampa.executors.per_vu_iterations as _pvi  # noqa: F401
-import rampa.executors.ramping_arrival_rate as _rar  # noqa: F401
-import rampa.executors.ramping_vus as _rv  # noqa: F401
-import rampa.executors.shared_iterations as _si  # noqa: F401
-from rampa._types import Sample
+from rampa.engine import Engine, EngineOptions
 from rampa.errors import ExitCode
-from rampa.executors import ExecutionState, create_executor
+from rampa.events import RunResult, RunStatus
 from rampa.loader import TestPlan
-from rampa.metrics import MetricEngine, MetricRegistry, register_builtins
 from rampa.output import ConsoleOutput, JSONOutput, OutputManager
-from rampa.thresholds import Threshold, ThresholdResult, evaluate_thresholds, parse_threshold
 
 logger = logging.getLogger(__name__)
 
-
-@dataclass(frozen=True)
-class RunResult:
-    """Result of a test run.
-
-    >>> r = RunResult(exit_code=ExitCode.OK, threshold_results=[])
-    >>> r.exit_code
-    <ExitCode.OK: 0>
-    """
-
-    exit_code: ExitCode
-    threshold_results: list[ThresholdResult]
+_STATUS_TO_EXIT: dict[RunStatus, ExitCode] = {
+    RunStatus.PASSED: ExitCode.OK,
+    RunStatus.THRESHOLD_FAILED: ExitCode.THRESHOLD_FAILURE,
+    RunStatus.SETUP_FAILED: ExitCode.SETUP_FAILURE,
+    RunStatus.EXECUTION_FAILED: ExitCode.ITERATION_EXCEPTION,
+    RunStatus.TEARDOWN_FAILED: ExitCode.ITERATION_EXCEPTION,
+    RunStatus.STOPPED: ExitCode.ABORTED,
+}
 
 
 async def run_test(
@@ -49,6 +34,9 @@ async def run_test(
     quiet: bool = False,
 ) -> RunResult:
     """Execute a test plan through the full lifecycle.
+
+    This is a convenience wrapper that uses the headless ``Engine`` and
+    adds CLI-specific output (console summary, JSON file, exit codes).
 
     Parameters
     ----------
@@ -62,20 +50,15 @@ async def run_test(
     Returns
     -------
     RunResult
-        The test result with exit code and threshold results.
+        The test result with status, snapshot, and threshold results.
+
+    >>> import rampa.runner
     """
-    registry = MetricRegistry()
-    register_builtins(registry)
+    from rampa._types import Sample
 
-    sample_queue: queue.SimpleQueue[Sample | None] = queue.SimpleQueue()
     output_samples: list[Sample] = []
-
-    engine = MetricEngine(
-        registry=registry,
-        sample_queue=sample_queue,
-        on_sample=output_samples.append,
-    )
-    engine.start()
+    options = EngineOptions(on_sample=output_samples.append)
+    controller = await Engine(plan, options).start()
 
     output_mgr = OutputManager()
     console = ConsoleOutput() if not quiet else None
@@ -89,79 +72,37 @@ async def run_test(
 
     await output_mgr.start_all()
 
-    abort_event = asyncio.Event()
-    setup_data: t.Any = None
-    run_exit_code = ExitCode.OK
-
-    try:
-        if plan.setup_fn is not None:
-            setup_data = await plan.setup_fn()
-    except Exception:
-        logger.exception("setup failed")
-        run_exit_code = ExitCode.SETUP_FAILURE
-
-    if run_exit_code == ExitCode.OK:
-        try:
-            async with asyncio.TaskGroup() as tg:
-                for scenario_name, (scenario_config, worker_fn) in plan.scenarios.items():
-                    executor = create_executor(scenario_config)
-
-                    state = ExecutionState(
-                        sample_queue=sample_queue,
-                        abort_event=abort_event,
-                        worker_fn=worker_fn,
-                        scenario=scenario_name,
-                        setup_data=setup_data,
-                    )
-                    tg.create_task(executor.run(state))
-        except Exception:
-            logger.exception("executor error")
-            run_exit_code = ExitCode.ITERATION_EXCEPTION
-
-    if plan.teardown_fn is not None:
-        try:
-            await plan.teardown_fn()
-        except Exception:
-            logger.exception("teardown failed")
-
-    engine.stop()
+    result = await controller.wait()
 
     output_mgr.buffer_samples(output_samples)
     await output_mgr.flush()
-
-    snapshot = engine.get_latest_snapshot()
-    threshold_results: list[ThresholdResult] = []
-
-    if snapshot and plan.config.thresholds:
-        metric_thresholds: dict[str, list[Threshold]] = {}
-        for metric_name, expressions in plan.config.thresholds.items():
-            metric_thresholds[metric_name] = [
-                Threshold(
-                    source=expr,
-                    expression=parse_threshold(expr),
-                )
-                for expr in expressions
-            ]
-        threshold_results = evaluate_thresholds(
-            metric_thresholds,
-            registry.all_sinks(),
-            snapshot.duration,
-        )
-
     await output_mgr.stop_all()
 
-    if snapshot:
+    if result.snapshot:
         if console:
-            console.render_summary(snapshot, threshold_results)
+            console.render_summary(result.snapshot, result.threshold_results)
         if json_out:
-            json_out.write_summary(snapshot, threshold_results)
+            json_out.write_summary(result.snapshot, result.threshold_results)
 
-    any_failed = any(not r.passed for r in threshold_results)
-    if run_exit_code != ExitCode.OK:
-        exit_code = run_exit_code
-    elif any_failed:
-        exit_code = ExitCode.THRESHOLD_FAILURE
-    else:
-        exit_code = ExitCode.OK
+    return result
 
-    return RunResult(exit_code=exit_code, threshold_results=threshold_results)
+
+def status_to_exit_code(status: RunStatus) -> ExitCode:
+    """Map a RunStatus to a process exit code.
+
+    Parameters
+    ----------
+    status : RunStatus
+        The headless run status.
+
+    Returns
+    -------
+    ExitCode
+        The corresponding process exit code.
+
+    >>> status_to_exit_code(RunStatus.PASSED)
+    <ExitCode.OK: 0>
+    >>> status_to_exit_code(RunStatus.THRESHOLD_FAILED)
+    <ExitCode.THRESHOLD_FAILURE: 1>
+    """
+    return _STATUS_TO_EXIT.get(status, ExitCode.ITERATION_EXCEPTION)

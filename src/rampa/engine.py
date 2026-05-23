@@ -50,6 +50,7 @@ class EngineOptions:
 
     run_id: str | None = None
     metric_flush_interval: float = 0.05
+    on_sample: t.Callable[[Sample], None] | None = None
 
 
 class RunController:
@@ -167,6 +168,7 @@ class Engine:
             registry=registry,
             sample_queue=sample_queue,
             flush_interval=self._options.metric_flush_interval,
+            on_sample=self._options.on_sample,
         )
         metric_engine.start()
 
