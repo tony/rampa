@@ -67,7 +67,7 @@ class RampingArrivalRateExecutor:
                 target_rate = float(stage.target)
                 duration_s = stage.duration.total_seconds()
                 stage_start = loop.time()
-                tick = 0
+                target_time = stage_start
 
                 while not state.abort_event.is_set():
                     elapsed = loop.time() - stage_start
@@ -78,7 +78,7 @@ class RampingArrivalRateExecutor:
                     rate = max(rate, 0.1)
                     interval = self._time_unit / rate
 
-                    target_time = stage_start + tick * interval
+                    target_time += interval
                     now = loop.time()
                     if now < target_time:
                         await asyncio.sleep(target_time - now)
@@ -94,8 +94,6 @@ class RampingArrivalRateExecutor:
                     else:
                         await sem.acquire()
                         tg.create_task(self._run_iteration(state, sem))
-
-                    tick += 1
 
                 current_rate = target_rate
 
