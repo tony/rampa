@@ -53,19 +53,22 @@ class PerVUIterationsExecutor:
                 worker = state.make_worker()
                 start = time.monotonic_ns()
                 try:
-                    await state.worker_fn(worker)
-                except Exception:
-                    logging.getLogger(__name__).warning(
-                        "iteration %d failed",
-                        worker.execution.iteration,
-                    )
-                    state.sample_queue.put(
-                        make_sample(
-                            "iteration_errors",
-                            1.0,
-                            {"scenario": state.scenario},
-                        ),
-                    )
+                    try:
+                        await state.worker_fn(worker)
+                    except Exception:
+                        logging.getLogger(__name__).warning(
+                            "iteration %d failed",
+                            worker.execution.iteration,
+                        )
+                        state.sample_queue.put(
+                            make_sample(
+                                "iteration_errors",
+                                1.0,
+                                {"scenario": state.scenario},
+                            ),
+                        )
+                finally:
+                    await worker.http.close()
                 elapsed_ns = time.monotonic_ns() - start
                 state.sample_queue.put(
                     make_sample(

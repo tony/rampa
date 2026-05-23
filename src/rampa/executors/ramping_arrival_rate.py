@@ -138,6 +138,7 @@ class RampingArrivalRateExecutor:
                     {"scenario": state.scenario},
                 ),
             )
+            await worker.http.close()
             sem.release()
 
 

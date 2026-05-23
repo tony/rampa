@@ -135,6 +135,7 @@ class ConstantArrivalRateExecutor:
                     {"scenario": state.scenario},
                 ),
             )
+            await worker.http.close()
             sem.release()
 
 
