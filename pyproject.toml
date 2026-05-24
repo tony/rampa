@@ -45,6 +45,9 @@ mcp = ["fastmcp>=2.0"]
 rampa = "rampa.cli:main"
 rampa-mcp = "rampa.mcp.server:main"
 
+[project.entry-points."pytest11"]
+rampa = "rampa.pytest_plugin"
+
 [project.urls]
 "Bug Tracker" = "https://github.com/tony/rampa/issues"
 Repository = "https://github.com/tony/rampa"
