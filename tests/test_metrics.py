@@ -265,7 +265,7 @@ def test_metric_engine_snapshots_bounded() -> None:
     engine.start()
 
     q.put(Sample("iterations", 1.0, time.monotonic_ns(), {}))
-    time.sleep(0.3)
+    time.sleep(0.15)
     engine.stop()
 
     assert len(engine._snapshots) <= 128
