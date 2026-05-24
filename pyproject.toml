@@ -59,6 +59,8 @@ dev = [
   "pytest",
   "pytest-rerunfailures",
   "pytest-watcher",
+  # Scripts
+  "tomlkit>=0.13",
   # Lint / typecheck
   "ruff",
   "ty>=0.0.35",
