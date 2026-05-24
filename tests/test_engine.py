@@ -185,3 +185,31 @@ def test_events_emit_phases() -> None:
     assert "execute" in phases
     assert "teardown" in phases
     assert "complete" in phases
+
+
+def test_snapshot_events_emitted() -> None:
+    """SnapshotEvent is emitted via the EventBus from MetricEngine."""
+
+    async def _noop(w: object) -> None:
+        await asyncio.sleep(0.01)
+
+    async def _run() -> bool:
+        from rampa.events import SnapshotEvent
+
+        plan = _make_plan(_noop, duration_ms=300)
+        controller = await Engine(plan).start()
+
+        found_snapshot = False
+
+        async def _collect() -> None:
+            nonlocal found_snapshot
+            async for event in controller.events():
+                if isinstance(event, SnapshotEvent):
+                    found_snapshot = True
+
+        collect_task = asyncio.create_task(_collect())
+        await controller.wait()
+        await collect_task
+        return found_snapshot
+
+    assert asyncio.run(_run())

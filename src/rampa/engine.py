@@ -24,11 +24,13 @@ import rampa.executors.ramping_arrival_rate as _rar  # noqa: F401
 import rampa.executors.ramping_vus as _rv  # noqa: F401
 import rampa.executors.shared_iterations as _si  # noqa: F401
 from rampa._types import Sample
+from rampa.bus import EventBus
 from rampa.events import (
     EngineEvent,
     PhaseEvent,
     RunResult,
     RunStatus,
+    SnapshotEvent,
     ThresholdEvent,
 )
 from rampa.executors import ExecutionState, create_executor
@@ -68,13 +70,15 @@ class RunController:
         run_task: asyncio.Task[RunResult],
         abort_event: asyncio.Event,
         metric_engine: MetricEngine,
-        event_queue: asyncio.Queue[EngineEvent | None],
+        bus: EventBus,
+        primary_queue: asyncio.Queue[EngineEvent | None],
     ) -> None:
         self._run_id = run_id
         self._run_task = run_task
         self._abort_event = abort_event
         self._metric_engine = metric_engine
-        self._event_queue = event_queue
+        self._bus = bus
+        self._primary_queue = primary_queue
         self._stopped = False
 
     @property
@@ -112,18 +116,33 @@ class RunController:
         return self._metric_engine.get_latest_snapshot()
 
     async def events(self) -> t.AsyncIterator[EngineEvent]:
-        """Single-consumer async iterator of engine events.
+        """Async iterator of engine events.
+
+        The first caller drains the primary queue that was subscribed
+        before the engine task started — this guarantees no early
+        events are lost. Additional callers subscribe independently
+        via the EventBus (they may miss events emitted before they
+        subscribe).
 
         Yields
         ------
         EngineEvent
             Engine lifecycle events until the run completes.
         """
-        while True:
-            event = await self._event_queue.get()
-            if event is None:
-                break
-            yield event
+        q = self._primary_queue
+        if q is not None:
+            self._primary_queue = None  # type: ignore[assignment]
+            try:
+                while True:
+                    event = await q.get()
+                    if event is None:
+                        break
+                    yield event
+            finally:
+                self._bus.unsubscribe(q)
+        else:
+            async for event in self._bus.events():
+                yield event
 
 
 class Engine:
@@ -164,16 +183,30 @@ class Engine:
 
         sample_queue: queue.SimpleQueue[Sample | None] = queue.SimpleQueue()
 
+        loop = asyncio.get_running_loop()
+        bus = EventBus(loop)
+
+        def _bridge_snapshot(snap: MetricSnapshot) -> None:
+            bus.publish_threadsafe(
+                SnapshotEvent(
+                    run_id=run_id,
+                    timestamp_ns=snap.timestamp,
+                    snapshot=snap,
+                ),
+            )
+
         metric_engine = MetricEngine(
             registry=registry,
             sample_queue=sample_queue,
             flush_interval=self._options.metric_flush_interval,
             on_sample=self._options.on_sample,
+            on_snapshot=_bridge_snapshot,
         )
         metric_engine.start()
 
         abort_event = asyncio.Event()
-        event_queue: asyncio.Queue[EngineEvent | None] = asyncio.Queue()
+
+        primary_queue = bus.subscribe()
 
         run_task = asyncio.create_task(
             self._run(
@@ -182,7 +215,7 @@ class Engine:
                 sample_queue=sample_queue,
                 metric_engine=metric_engine,
                 abort_event=abort_event,
-                event_queue=event_queue,
+                bus=bus,
             ),
         )
 
@@ -191,7 +224,8 @@ class Engine:
             run_task=run_task,
             abort_event=abort_event,
             metric_engine=metric_engine,
-            event_queue=event_queue,
+            bus=bus,
+            primary_queue=primary_queue,
         )
 
     async def _run(
@@ -201,7 +235,7 @@ class Engine:
         sample_queue: queue.SimpleQueue[Sample | None],
         metric_engine: MetricEngine,
         abort_event: asyncio.Event,
-        event_queue: asyncio.Queue[EngineEvent | None],
+        bus: EventBus,
     ) -> RunResult:
         """Execute the full lifecycle: setup → execute → teardown."""
         status = RunStatus.PASSED
@@ -209,7 +243,7 @@ class Engine:
         stop_reason: str | None = None
 
         def _emit(event: EngineEvent) -> None:
-            event_queue.put_nowait(event)
+            bus.publish(event)
 
         def _phase(
             phase: t.Literal["setup", "execute", "teardown", "complete"],
@@ -305,7 +339,7 @@ class Engine:
                 stop_reason = "abort requested"
 
             _phase("complete")
-            event_queue.put_nowait(None)
+            bus.publish(None)
 
         return RunResult(
             run_id=run_id,
