@@ -8,6 +8,7 @@ consumer being active. Frontends subscribe to events for live updates.
 
 from __future__ import annotations
 
+import dataclasses
 import enum
 import typing as t
 import uuid
@@ -109,3 +110,31 @@ class RunResult:
     threshold_results: list[ThresholdResult]
     error: BaseException | None = field(default=None, repr=False)
     stop_reason: str | None = None
+
+
+def serialize_event(event: EngineEvent) -> dict[str, t.Any]:
+    """Serialize an engine event to a JSON-compatible dict.
+
+    Adds a ``type`` key with the event class name. All dataclass
+    fields are included via ``dataclasses.asdict()``.
+
+    Parameters
+    ----------
+    event : EngineEvent
+        The event to serialize.
+
+    Returns
+    -------
+    dict[str, Any]
+        JSON-serializable dictionary.
+
+    >>> e = PhaseEvent(run_id="abc", timestamp_ns=0, phase="setup")
+    >>> d = serialize_event(e)
+    >>> d["type"]
+    'PhaseEvent'
+    >>> d["phase"]
+    'setup'
+    """
+    d = dataclasses.asdict(event)
+    d["type"] = type(event).__name__
+    return d
