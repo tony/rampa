@@ -9,6 +9,7 @@ many workers to use. They know nothing about protocols (HTTP, gRPC, etc.).
 from __future__ import annotations
 
 import asyncio
+import difflib
 import logging
 import queue
 import time
@@ -211,6 +212,17 @@ def create_executor(config: ScenarioConfig) -> t.Any:
     """
     cls = _EXECUTOR_REGISTRY.get(config.executor)
     if cls is None:
-        msg = f"unknown executor: {config.executor!r}. Available: {sorted(_EXECUTOR_REGISTRY)}"
+        available = sorted(_EXECUTOR_REGISTRY)
+        parts = [f"unknown executor: {config.executor!r}"]
+        close = difflib.get_close_matches(
+            config.executor,
+            available,
+            n=1,
+            cutoff=0.6,
+        )
+        if close:
+            parts.append(f"did you mean {close[0]!r}?")
+        parts.append(f"available: {available}")
+        msg = ". ".join(parts)
         raise ValueError(msg)
     return cls(config)

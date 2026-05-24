@@ -1,14 +1,17 @@
-"""Tests for the constant-vus executor."""
+"""Tests for the constant-vus executor and create_executor factory."""
 
 from __future__ import annotations
 
 import asyncio
 import datetime
 import queue
+import typing as t
+
+import pytest
 
 from rampa._types import Sample
 from rampa.config import ScenarioConfig
-from rampa.executors import ExecutionState
+from rampa.executors import ExecutionState, create_executor
 from rampa.executors.constant_vus import ConstantVUsExecutor
 
 
@@ -128,3 +131,71 @@ def test_constant_vus_respects_abort() -> None:
     count = asyncio.run(_run())
     assert count > 0
     assert count < 100
+
+
+# ---------------------------------------------------------------------------
+# create_executor factory tests
+# ---------------------------------------------------------------------------
+
+
+class UnknownExecutorFixture(t.NamedTuple):
+    """Test case for unknown executor error messages."""
+
+    test_id: str
+    name: str
+    expected_suggestion: str | None
+
+
+_UNKNOWN_EXECUTOR_FIXTURES: list[UnknownExecutorFixture] = [
+    UnknownExecutorFixture(
+        test_id="typo_constant",
+        name="contsant-vus",
+        expected_suggestion="constant-vus",
+    ),
+    UnknownExecutorFixture(
+        test_id="typo_ramping",
+        name="rampng-vus",
+        expected_suggestion="ramping-vus",
+    ),
+    UnknownExecutorFixture(
+        test_id="no_match",
+        name="nonexistent-executor",
+        expected_suggestion=None,
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    list(UnknownExecutorFixture._fields),
+    _UNKNOWN_EXECUTOR_FIXTURES,
+    ids=[f.test_id for f in _UNKNOWN_EXECUTOR_FIXTURES],
+)
+def test_create_executor_unknown_suggests(
+    test_id: str,
+    name: str,
+    expected_suggestion: str | None,
+) -> None:
+    """create_executor suggests close matches for unknown executor names."""
+    cfg = ScenarioConfig(executor=name)
+    with pytest.raises(ValueError, match="unknown executor"):
+        create_executor(cfg)
+
+    try:
+        create_executor(cfg)
+    except ValueError as exc:
+        msg = str(exc)
+        if expected_suggestion:
+            assert f"did you mean {expected_suggestion!r}" in msg
+        else:
+            assert "did you mean" not in msg
+
+
+def test_create_executor_valid() -> None:
+    """create_executor returns an executor for a valid name."""
+    cfg = ScenarioConfig(
+        executor="constant-vus",
+        vus=1,
+        duration=datetime.timedelta(seconds=1),
+    )
+    executor = create_executor(cfg)
+    assert isinstance(executor, ConstantVUsExecutor)
