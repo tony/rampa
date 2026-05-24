@@ -9,13 +9,17 @@ many workers to use. They know nothing about protocols (HTTP, gRPC, etc.).
 from __future__ import annotations
 
 import asyncio
+import logging
 import queue
+import time
 import typing as t
 from dataclasses import dataclass, field
 
-from rampa._types import Sample
+from rampa._types import Sample, make_sample
 from rampa.config import ScenarioConfig
 from rampa.worker import ExecutionInfo, Worker
+
+logger = logging.getLogger(__name__)
 
 WorkerFn = t.Callable[[Worker], t.Awaitable[None]]
 """User-provided async function that receives a Worker and runs one iteration."""
@@ -100,6 +104,53 @@ class ExecutionState:
             ),
             setup_data=self.setup_data,
         )
+
+
+async def run_iteration(state: ExecutionState) -> None:
+    """Execute one user iteration with timing, error handling, and cleanup.
+
+    Creates a worker, invokes the user function, emits ``iterations``,
+    ``iteration_duration``, and optionally ``iteration_errors`` samples,
+    then closes any HTTP resources.
+
+    Parameters
+    ----------
+    state : ExecutionState
+        Shared execution state providing the worker factory and sample queue.
+
+    >>> import rampa.executors
+    """
+    worker = state.make_worker()
+    start = time.monotonic_ns()
+    try:
+        try:
+            await state.worker_fn(worker)
+        except Exception:
+            logger.warning(
+                "iteration %d failed",
+                worker.execution.iteration,
+            )
+            state.sample_queue.put(
+                make_sample(
+                    "iteration_errors",
+                    1.0,
+                    {"scenario": state.scenario},
+                ),
+            )
+    finally:
+        if worker._http is not None:
+            await worker._http.close()
+    elapsed_ns = time.monotonic_ns() - start
+    state.sample_queue.put(
+        make_sample("iterations", 1.0, {"scenario": state.scenario}),
+    )
+    state.sample_queue.put(
+        make_sample(
+            "iteration_duration",
+            elapsed_ns / 1_000_000,
+            {"scenario": state.scenario},
+        ),
+    )
 
 
 class Executor(t.Protocol):

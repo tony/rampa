@@ -7,12 +7,9 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import logging
-import time
 
-from rampa._types import make_sample
 from rampa.config import ScenarioConfig
-from rampa.executors import ExecutionState, register_executor
+from rampa.executors import ExecutionState, register_executor, run_iteration
 
 
 class RampingVUsExecutor:
@@ -88,41 +85,7 @@ class RampingVUsExecutor:
     async def _run_vu(self, state: ExecutionState) -> None:
         """Single VU loop: iterate until cancelled or aborted."""
         while not state.abort_event.is_set():
-            worker = state.make_worker()
-            start = time.monotonic_ns()
-            try:
-                try:
-                    await state.worker_fn(worker)
-                except Exception:
-                    logging.getLogger(__name__).warning(
-                        "iteration %d failed",
-                        worker.execution.iteration,
-                    )
-                    state.sample_queue.put(
-                        make_sample(
-                            "iteration_errors",
-                            1.0,
-                            {"scenario": state.scenario},
-                        ),
-                    )
-            finally:
-                if worker._http is not None:
-                    await worker._http.close()
-            elapsed_ns = time.monotonic_ns() - start
-            state.sample_queue.put(
-                make_sample(
-                    "iterations",
-                    1.0,
-                    {"scenario": state.scenario},
-                ),
-            )
-            state.sample_queue.put(
-                make_sample(
-                    "iteration_duration",
-                    elapsed_ns / 1_000_000,
-                    {"scenario": state.scenario},
-                ),
-            )
+            await run_iteration(state)
 
 
 register_executor("ramping-vus", RampingVUsExecutor)

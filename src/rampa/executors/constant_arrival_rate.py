@@ -10,12 +10,10 @@ silently reducing the request rate.
 from __future__ import annotations
 
 import asyncio
-import logging
-import time
 
 from rampa._types import make_sample
 from rampa.config import ScenarioConfig
-from rampa.executors import ExecutionState, register_executor
+from rampa.executors import ExecutionState, register_executor, run_iteration
 
 
 class ConstantArrivalRateExecutor:
@@ -101,41 +99,9 @@ class ConstantArrivalRateExecutor:
         sem: asyncio.Semaphore,
     ) -> None:
         """Run one iteration and release the semaphore when done."""
-        worker = state.make_worker()
-        start = time.monotonic_ns()
         try:
-            try:
-                await state.worker_fn(worker)
-            except Exception:
-                logging.getLogger(__name__).warning(
-                    "iteration %d failed",
-                    worker.execution.iteration,
-                )
-                state.sample_queue.put(
-                    make_sample(
-                        "iteration_errors",
-                        1.0,
-                        {"scenario": state.scenario},
-                    ),
-                )
+            await run_iteration(state)
         finally:
-            elapsed_ns = time.monotonic_ns() - start
-            state.sample_queue.put(
-                make_sample(
-                    "iterations",
-                    1.0,
-                    {"scenario": state.scenario},
-                ),
-            )
-            state.sample_queue.put(
-                make_sample(
-                    "iteration_duration",
-                    elapsed_ns / 1_000_000,
-                    {"scenario": state.scenario},
-                ),
-            )
-            if worker._http is not None:
-                await worker._http.close()
             sem.release()
 
 
