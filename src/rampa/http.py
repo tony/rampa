@@ -245,8 +245,12 @@ class HttpClient:
             tags.update(extra_tags)
         self._queue.put(make_sample(metric, value, tags))
 
-    def _emit_phase_timings(self, request_tags: dict[str, str]) -> None:
-        t = self._current_timings
+    def _emit_phase_timings(
+        self,
+        request_tags: dict[str, str],
+        timings: _TraceTimings | None = None,
+    ) -> None:
+        t = timings if timings is not None else self._current_timings
         if t is None or t.request_start == 0:
             return
 
@@ -317,6 +321,7 @@ class HttpClient:
                 body = await resp.read()
                 elapsed_ns = time.monotonic_ns() - start_ns
                 elapsed_ms = elapsed_ns / 1_000_000
+                req_timings = self._current_timings
 
                 request_tags["status"] = str(resp.status)
 
@@ -330,7 +335,7 @@ class HttpClient:
                 content_length = len(body)
                 self._emit("data_received", float(content_length), request_tags)
 
-                self._emit_phase_timings(request_tags)
+                self._emit_phase_timings(request_tags, req_timings)
 
                 headers = dict(resp.headers.items())
 
@@ -343,6 +348,7 @@ class HttpClient:
         except Exception as exc:
             elapsed_ns = time.monotonic_ns() - start_ns
             elapsed_ms = elapsed_ns / 1_000_000
+            req_timings = self._current_timings
 
             request_tags["error"] = type(exc).__name__
 
@@ -350,7 +356,7 @@ class HttpClient:
             self._emit("http_req_duration", elapsed_ms, request_tags)
             self._emit("http_req_failed", 1.0, request_tags)
             self._emit("data_sent", float(sent_bytes), request_tags)
-            self._emit_phase_timings(request_tags)
+            self._emit_phase_timings(request_tags, req_timings)
             raise
 
     async def get(self, url: str, **kwargs: t.Any) -> Response:
