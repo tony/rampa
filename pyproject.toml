@@ -38,6 +38,9 @@ dependencies = [
   "aiohttp>=3.9",
 ]
 
+[project.optional-dependencies]
+mcp = ["fastmcp>=2.0"]
+
 [project.scripts]
 rampa = "rampa.cli:main"
 
