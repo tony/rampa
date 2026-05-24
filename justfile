@@ -107,6 +107,46 @@ ty:
 watch-ty:
     uv run ty check --watch
 
+# Detect installed agent CLIs (Claude, Codex, Cursor, Gemini)
+[group: 'mcp']
+mcp-detect:
+    uv run scripts/mcp_swap.py detect
+
+# Show current MCP server entry per CLI
+[group: 'mcp']
+mcp-status *args:
+    uv run scripts/mcp_swap.py status {{ args }}
+
+# Rewrite CLI configs to run this checkout's MCP server
+[group: 'mcp']
+mcp-use-local *args:
+    uv run scripts/mcp_swap.py use-local --entry rampa-mcp {{ args }}
+
+# Restore each CLI's config from the backup written by mcp-use-local
+[group: 'mcp']
+mcp-revert *args:
+    uv run scripts/mcp_swap.py revert {{ args }}
+
+# Run benchmark scripts
+[group: 'bench']
+bench-scheduler *args:
+    uv run python scripts/bench_scheduler.py {{ args }}
+
+# Run throughput benchmark
+[group: 'bench']
+bench-throughput *args:
+    uv run python scripts/bench_throughput.py {{ args }}
+
+# Run metric engine benchmark
+[group: 'bench']
+bench-metrics *args:
+    uv run python scripts/bench_metrics.py {{ args }}
+
+# Run HTTP overhead benchmark
+[group: 'bench']
+bench-http *args:
+    uv run python scripts/bench_http_local.py {{ args }}
+
 [private]
 _entr-warn:
     @echo "----------------------------------------------------------"

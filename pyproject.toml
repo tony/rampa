@@ -32,7 +32,21 @@ include = [
   { path = "conftest.py", format = "sdist" },
 ]
 
-dependencies = []
+dependencies = [
+  "pydantic>=2.0",
+  "click>=8.0",
+  "aiohttp>=3.9",
+]
+
+[project.optional-dependencies]
+mcp = ["fastmcp>=2.0"]
+
+[project.scripts]
+rampa = "rampa.cli:main"
+rampa-mcp = "rampa.mcp.server:main"
+
+[project.entry-points."pytest11"]
+rampa = "rampa.pytest_plugin"
 
 [project.urls]
 "Bug Tracker" = "https://github.com/tony/rampa/issues"
@@ -41,19 +55,22 @@ Repository = "https://github.com/tony/rampa"
 [dependency-groups]
 dev = [
   # Docs
-  "gp-sphinx==0.0.1a20",
-  "sphinx-autodoc-api-style==0.0.1a20",
+  "gp-sphinx==0.0.1a23",
+  "sphinx-autodoc-api-style==0.0.1a23",
   "sphinx-autobuild",
   # Testing
   "pytest",
+  "pytest-rerunfailures",
   "pytest-watcher",
+  # Scripts
+  "tomlkit>=0.13",
   # Lint / typecheck
   "ruff",
   "ty>=0.0.35",
 ]
 docs = [
-  "gp-sphinx==0.0.1a20",
-  "sphinx-autodoc-api-style==0.0.1a20",
+  "gp-sphinx==0.0.1a23",
+  "sphinx-autodoc-api-style==0.0.1a23",
   "sphinx-autobuild",
 ]
 

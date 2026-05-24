@@ -1,0 +1,445 @@
+"""HTTP client with automatic metric emission for rampa.
+
+Wraps ``aiohttp.ClientSession`` and emits timing metrics for every request:
+``http_reqs``, ``http_req_duration``, ``http_req_failed``, data transfer
+counters, and per-phase timing (blocked, connecting, sending, waiting,
+receiving).
+
+>>> import rampa.http
+"""
+
+from __future__ import annotations
+
+import queue
+import time
+import typing as t
+from dataclasses import dataclass
+
+import aiohttp
+
+from rampa._types import Sample, make_sample
+
+
+@dataclass(frozen=True)
+class Response:
+    """Wrapper around an HTTP response with metric-relevant fields.
+
+    >>> r = Response(status=200, headers={}, body=b"ok", url="http://x")
+    >>> r.status
+    200
+    """
+
+    status: int
+    headers: dict[str, str]
+    body: bytes
+    url: str
+
+    def json(self) -> t.Any:
+        """Parse the response body as JSON.
+
+        Returns
+        -------
+        Any
+            Parsed JSON data.
+
+        >>> import json
+        >>> r = Response(
+        ...     status=200, headers={}, body=b'{"a": 1}', url="",
+        ... )
+        >>> r.json()
+        {'a': 1}
+        """
+        import json
+
+        return json.loads(self.body)
+
+    def text(self) -> str:
+        """Decode the response body as UTF-8 text.
+
+        Returns
+        -------
+        str
+            Decoded body.
+
+        >>> r = Response(status=200, headers={}, body=b"hello", url="")
+        >>> r.text()
+        'hello'
+        """
+        return self.body.decode("utf-8", errors="replace")
+
+
+def _estimate_request_size(kwargs: dict[str, t.Any]) -> int:
+    """Estimate the size of an outgoing request body in bytes.
+
+    Parameters
+    ----------
+    kwargs : dict[str, Any]
+        Request keyword arguments.
+
+    Returns
+    -------
+    int
+        Estimated body size in bytes.
+
+    >>> _estimate_request_size({"data": "hello"})
+    5
+    >>> _estimate_request_size({"data": b"bytes"})
+    5
+    >>> _estimate_request_size({})
+    0
+    """
+    data = kwargs.get("data")
+    if data is not None:
+        if isinstance(data, (str, bytes)):
+            return len(data)
+        return 0
+    json_data = kwargs.get("json")
+    if json_data is not None:
+        import json
+
+        return len(json.dumps(json_data).encode())
+    return 0
+
+
+class _TraceTimings:
+    """Per-request timing accumulator for aiohttp trace signals.
+
+    Accepts and ignores ``trace_request_ctx`` so it can be used as
+    an aiohttp ``trace_config_ctx_factory``.
+
+    >>> t = _TraceTimings()
+    >>> t.request_start
+    0
+    """
+
+    def __init__(self, **kwargs: t.Any) -> None:
+        self.request_start: int = 0
+        self.connection_create_start: int = 0
+        self.connection_create_end: int = 0
+        self.request_headers_sent: int = 0
+        self.first_response_chunk: int = 0
+        self.request_end: int = 0
+
+
+def _build_trace_config(client: t.Any) -> aiohttp.TraceConfig:
+    """Build an aiohttp TraceConfig that records per-phase timings.
+
+    The timings are stored on the trace request context object
+    (a ``_TraceTimings`` instance) and read back by the caller
+    after the request completes.
+
+    >>> import rampa.http
+    """
+    tc = aiohttp.TraceConfig(trace_config_ctx_factory=_TraceTimings)  # ty: ignore[invalid-argument-type]
+
+    async def _on_request_start(
+        session: aiohttp.ClientSession,
+        ctx: _TraceTimings,
+        params: aiohttp.TraceRequestStartParams,
+    ) -> None:
+        ctx.request_start = time.monotonic_ns()
+        client._current_timings = ctx
+
+    async def _on_connection_create_start(
+        session: aiohttp.ClientSession,
+        ctx: _TraceTimings,
+        params: aiohttp.TraceConnectionCreateStartParams,
+    ) -> None:
+        ctx.connection_create_start = time.monotonic_ns()
+
+    async def _on_connection_create_end(
+        session: aiohttp.ClientSession,
+        ctx: _TraceTimings,
+        params: aiohttp.TraceConnectionCreateEndParams,
+    ) -> None:
+        ctx.connection_create_end = time.monotonic_ns()
+
+    async def _on_request_headers_sent(
+        session: aiohttp.ClientSession,
+        ctx: _TraceTimings,
+        params: aiohttp.TraceRequestHeadersSentParams,
+    ) -> None:
+        ctx.request_headers_sent = time.monotonic_ns()
+
+    async def _on_response_chunk_received(
+        session: aiohttp.ClientSession,
+        ctx: _TraceTimings,
+        params: aiohttp.TraceResponseChunkReceivedParams,
+    ) -> None:
+        if ctx.first_response_chunk == 0:
+            ctx.first_response_chunk = time.monotonic_ns()
+
+    async def _on_request_end(
+        session: aiohttp.ClientSession,
+        ctx: _TraceTimings,
+        params: aiohttp.TraceRequestEndParams,
+    ) -> None:
+        ctx.request_end = time.monotonic_ns()
+
+    tc.on_request_start.append(_on_request_start)
+    tc.on_connection_create_start.append(_on_connection_create_start)
+    tc.on_connection_create_end.append(_on_connection_create_end)
+    tc.on_request_headers_sent.append(_on_request_headers_sent)
+    tc.on_response_chunk_received.append(_on_response_chunk_received)
+    tc.on_request_end.append(_on_request_end)
+
+    return tc
+
+
+class HttpClient:
+    """HTTP client that auto-emits metrics for every request.
+
+    Parameters
+    ----------
+    sample_queue : queue.SimpleQueue[Sample | None]
+        Queue for emitting metric samples.
+    tags : dict[str, str]
+        Base tags added to every sample (e.g. scenario name).
+
+    >>> import queue as q
+    >>> sq: q.SimpleQueue[Sample | None] = q.SimpleQueue()
+    >>> client = HttpClient(sq, {"scenario": "test"})
+    >>> client._tags["scenario"]
+    'test'
+    """
+
+    def __init__(
+        self,
+        sample_queue: queue.SimpleQueue[Sample | None],
+        tags: dict[str, str],
+    ) -> None:
+        self._queue = sample_queue
+        self._tags = tags
+        self._session: aiohttp.ClientSession | None = None
+        self._current_timings: _TraceTimings | None = None
+
+    async def _ensure_session(self) -> aiohttp.ClientSession:
+        if self._session is None or self._session.closed:
+            self._trace_config = _build_trace_config(self)
+            self._session = aiohttp.ClientSession(
+                trace_configs=[self._trace_config],
+            )
+        return self._session
+
+    async def __aenter__(self) -> HttpClient:
+        """Enter async context manager."""
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: object,
+    ) -> None:
+        """Exit async context manager and close the session."""
+        await self.close()
+
+    async def close(self) -> None:
+        """Close the underlying HTTP session."""
+        if self._session is not None and not self._session.closed:
+            await self._session.close()
+
+    def _emit(self, metric: str, value: float, extra_tags: dict[str, str] | None = None) -> None:
+        tags = dict(self._tags)
+        if extra_tags:
+            tags.update(extra_tags)
+        self._queue.put(make_sample(metric, value, tags))
+
+    def _emit_phase_timings(
+        self,
+        request_tags: dict[str, str],
+        timings: _TraceTimings | None = None,
+    ) -> None:
+        t = timings if timings is not None else self._current_timings
+        if t is None or t.request_start == 0:
+            return
+
+        def _ms(start: int, end: int) -> float:
+            if start == 0 or end == 0:
+                return 0.0
+            return max(0.0, (end - start) / 1_000_000)
+
+        self._emit(
+            "http_req_blocked",
+            _ms(t.request_start, t.connection_create_start or t.request_headers_sent),
+            request_tags,
+        )
+        self._emit(
+            "http_req_connecting",
+            _ms(t.connection_create_start, t.connection_create_end),
+            request_tags,
+        )
+        self._emit(
+            "http_req_sending",
+            _ms(
+                t.connection_create_end or t.request_start,
+                t.request_headers_sent,
+            ),
+            request_tags,
+        )
+        self._emit(
+            "http_req_waiting",
+            _ms(t.request_headers_sent, t.first_response_chunk or t.request_end),
+            request_tags,
+        )
+        self._emit(
+            "http_req_receiving",
+            _ms(t.first_response_chunk, t.request_end),
+            request_tags,
+        )
+
+    async def request(
+        self,
+        method: str,
+        url: str,
+        **kwargs: t.Any,
+    ) -> Response:
+        """Send an HTTP request and emit timing metrics.
+
+        Parameters
+        ----------
+        method : str
+            HTTP method (GET, POST, etc.).
+        url : str
+            Request URL.
+        **kwargs : Any
+            Additional arguments passed to ``aiohttp.ClientSession.request``.
+
+        Returns
+        -------
+        Response
+            The response wrapper.
+        """
+        session = await self._ensure_session()
+        request_tags = {"method": method, "url": url}
+
+        sent_bytes = _estimate_request_size(kwargs)
+
+        start_ns = time.monotonic_ns()
+        try:
+            async with session.request(method, url, **kwargs) as resp:
+                body = await resp.read()
+                elapsed_ns = time.monotonic_ns() - start_ns
+                elapsed_ms = elapsed_ns / 1_000_000
+                req_timings = self._current_timings
+
+                request_tags["status"] = str(resp.status)
+
+                self._emit("http_reqs", 1.0, request_tags)
+                self._emit("http_req_duration", elapsed_ms, request_tags)
+
+                failed = 0.0 if 200 <= resp.status < 400 else 1.0
+                self._emit("http_req_failed", failed, request_tags)
+
+                self._emit("data_sent", float(sent_bytes), request_tags)
+                content_length = len(body)
+                self._emit("data_received", float(content_length), request_tags)
+
+                self._emit_phase_timings(request_tags, req_timings)
+
+                headers = dict(resp.headers.items())
+
+                return Response(
+                    status=resp.status,
+                    headers=headers,
+                    body=body,
+                    url=str(resp.url),
+                )
+        except Exception as exc:
+            elapsed_ns = time.monotonic_ns() - start_ns
+            elapsed_ms = elapsed_ns / 1_000_000
+            req_timings = self._current_timings
+
+            request_tags["error"] = type(exc).__name__
+
+            self._emit("http_reqs", 1.0, request_tags)
+            self._emit("http_req_duration", elapsed_ms, request_tags)
+            self._emit("http_req_failed", 1.0, request_tags)
+            self._emit("data_sent", float(sent_bytes), request_tags)
+            self._emit_phase_timings(request_tags, req_timings)
+            raise
+
+    async def get(self, url: str, **kwargs: t.Any) -> Response:
+        """Send a GET request.
+
+        Parameters
+        ----------
+        url : str
+            Request URL.
+        **kwargs : Any
+            Additional arguments.
+
+        Returns
+        -------
+        Response
+            The response wrapper.
+        """
+        return await self.request("GET", url, **kwargs)
+
+    async def post(self, url: str, **kwargs: t.Any) -> Response:
+        """Send a POST request.
+
+        Parameters
+        ----------
+        url : str
+            Request URL.
+        **kwargs : Any
+            Additional arguments.
+
+        Returns
+        -------
+        Response
+            The response wrapper.
+        """
+        return await self.request("POST", url, **kwargs)
+
+    async def put(self, url: str, **kwargs: t.Any) -> Response:
+        """Send a PUT request.
+
+        Parameters
+        ----------
+        url : str
+            Request URL.
+        **kwargs : Any
+            Additional arguments.
+
+        Returns
+        -------
+        Response
+            The response wrapper.
+        """
+        return await self.request("PUT", url, **kwargs)
+
+    async def delete(self, url: str, **kwargs: t.Any) -> Response:
+        """Send a DELETE request.
+
+        Parameters
+        ----------
+        url : str
+            Request URL.
+        **kwargs : Any
+            Additional arguments.
+
+        Returns
+        -------
+        Response
+            The response wrapper.
+        """
+        return await self.request("DELETE", url, **kwargs)
+
+    async def patch(self, url: str, **kwargs: t.Any) -> Response:
+        """Send a PATCH request.
+
+        Parameters
+        ----------
+        url : str
+            Request URL.
+        **kwargs : Any
+            Additional arguments.
+
+        Returns
+        -------
+        Response
+            The response wrapper.
+        """
+        return await self.request("PATCH", url, **kwargs)

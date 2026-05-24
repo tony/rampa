@@ -22,7 +22,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
-        run: uv sync --all-groups
+        run: uv sync --all-extras --all-groups
       - name: Lint (ruff check)
         run: uv run ruff check .
       - name: Format check (ruff format)
@@ -53,7 +53,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
-        run: uv sync --all-groups
+        run: uv sync --all-extras --all-groups
       - name: Build package
         run: uv build
       - name: Publish package
