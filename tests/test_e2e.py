@@ -43,7 +43,7 @@ def test_e2e_passing_test(tmp_path: t.Any) -> None:
 
         import rampa
 
-        @rampa.scenario(executor="constant-vus", vus=2, duration="500ms")
+        @rampa.scenario(executor="constant-vus", vus=2, duration="300ms")
         async def default(worker: rampa.Worker) -> None:
             resp = await worker.http.get("http://127.0.0.1:{port}/api/test")
             worker.check(resp, {
@@ -93,7 +93,7 @@ def test_e2e_failing_threshold(tmp_path: t.Any) -> None:
             },
         )
 
-        @rampa.scenario(executor="constant-vus", vus=1, duration="300ms")
+        @rampa.scenario(executor="constant-vus", vus=1, duration="200ms")
         async def default(worker: rampa.Worker) -> None:
             await worker.http.get("http://127.0.0.1:{port}/api/test")
     """)
