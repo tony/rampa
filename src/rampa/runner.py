@@ -8,11 +8,14 @@ to ``Engine``/``RunController`` internally.
 
 from __future__ import annotations
 
+import asyncio
+import json
 import logging
+import pathlib
 
-from rampa.engine import Engine, EngineOptions
+from rampa.engine import Engine, EngineOptions, RunController
 from rampa.errors import ExitCode
-from rampa.events import RunResult, RunStatus
+from rampa.events import RunResult, RunStatus, serialize_event
 from rampa.loader import TestPlan
 from rampa.output import ConsoleOutput, JSONOutput, OutputManager
 
@@ -32,6 +35,7 @@ async def run_test(
     plan: TestPlan,
     json_output_path: str | None = None,
     quiet: bool = False,
+    event_log_path: str | None = None,
 ) -> RunResult:
     """Execute a test plan through the full lifecycle.
 
@@ -46,6 +50,8 @@ async def run_test(
         Path for JSON output file. None disables JSON output.
     quiet : bool
         Suppress console summary.
+    event_log_path : str | None
+        Path for JSONL event log. None disables event logging.
 
     Returns
     -------
@@ -59,6 +65,12 @@ async def run_test(
     output_samples: list[Sample] = []
     options = EngineOptions(on_sample=output_samples.append)
     controller = await Engine(plan, options).start()
+
+    drain_task: asyncio.Task[None] | None = None
+    if event_log_path:
+        drain_task = asyncio.create_task(
+            _drain_events(controller, event_log_path),
+        )
 
     output_mgr = OutputManager()
     console = ConsoleOutput() if not quiet else None
@@ -74,6 +86,9 @@ async def run_test(
 
     result = await controller.wait()
 
+    if drain_task is not None:
+        await drain_task
+
     output_mgr.buffer_samples(output_samples)
     await output_mgr.flush()
     await output_mgr.stop_all()
@@ -85,6 +100,26 @@ async def run_test(
             json_out.write_summary(result.snapshot, result.threshold_results)
 
     return result
+
+
+async def _drain_events(
+    controller: RunController,
+    path: str,
+) -> None:
+    """Drain engine events to a JSONL file.
+
+    Parameters
+    ----------
+    controller : RunController
+        The run controller to subscribe to.
+    path : str
+        Output file path.
+    """
+    out = pathlib.Path(path)
+    with out.open("w") as f:
+        async for event in controller.events():
+            line = json.dumps(serialize_event(event))
+            f.write(line + "\n")
 
 
 def status_to_exit_code(status: RunStatus) -> ExitCode:

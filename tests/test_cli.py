@@ -130,3 +130,79 @@ def test_doctor_shows_aiohttp() -> None:
     runner = CliRunner()
     result = runner.invoke(main, ["doctor"])
     assert "aiohttp:" in result.output
+
+
+# ---------------------------------------------------------------------------
+# Tests: --event-log
+# ---------------------------------------------------------------------------
+
+
+def test_event_log_produces_jsonl(tmp_path: t.Any) -> None:
+    """--event-log writes a JSONL file with PhaseEvent lines."""
+    script = tmp_path / "test_log.py"
+    script.write_text(
+        textwrap.dedent("""\
+        import asyncio
+        import rampa
+
+        @rampa.scenario(executor="constant-vus", vus=1, duration="200ms")
+        async def default(w):
+            await asyncio.sleep(0.001)
+    """),
+    )
+    log_file = tmp_path / "events.jsonl"
+
+    runner = CliRunner()
+    result = runner.invoke(
+        main,
+        ["run", str(script), "--event-log", str(log_file), "--quiet"],
+    )
+    assert result.exit_code == 0, result.output
+
+    lines = log_file.read_text().strip().splitlines()
+    assert len(lines) > 0
+
+    import json
+
+    events = [json.loads(line) for line in lines]
+    types = [e["type"] for e in events]
+    assert "PhaseEvent" in types
+
+    phase_events = [e for e in events if e["type"] == "PhaseEvent"]
+    phases = [e["phase"] for e in phase_events]
+    assert "setup" in phases
+    assert "execute" in phases
+    assert "teardown" in phases
+    assert "complete" in phases
+
+
+def test_event_log_contains_snapshot_events(tmp_path: t.Any) -> None:
+    """--event-log includes SnapshotEvent entries with metric values."""
+    script = tmp_path / "test_snap.py"
+    script.write_text(
+        textwrap.dedent("""\
+        import asyncio
+        import rampa
+
+        @rampa.scenario(executor="constant-vus", vus=1, duration="200ms")
+        async def default(w):
+            await asyncio.sleep(0.01)
+    """),
+    )
+    log_file = tmp_path / "events.jsonl"
+
+    runner = CliRunner()
+    result = runner.invoke(
+        main,
+        ["run", str(script), "--event-log", str(log_file), "--quiet"],
+    )
+    assert result.exit_code == 0, result.output
+
+    import json
+
+    lines = log_file.read_text().strip().splitlines()
+    events = [json.loads(line) for line in lines]
+    snapshots = [e for e in events if e["type"] == "SnapshotEvent"]
+    assert len(snapshots) > 0
+    assert "snapshot" in snapshots[0]
+    assert "values" in snapshots[0]["snapshot"]

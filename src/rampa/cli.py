@@ -28,6 +28,7 @@ def main() -> None:
 @click.option("--duration", type=str, default=None, help="Test duration (e.g. 30s, 1m).")
 @click.option("--scenario", type=str, default=None, help="Run a specific scenario.")
 @click.option("--out", "json_output", type=str, default=None, help="JSON output file path.")
+@click.option("--event-log", type=str, default=None, help="JSONL event log file path.")
 @click.option("--quiet", is_flag=True, default=False, help="Suppress console summary.")
 def run(
     script: str,
@@ -35,6 +36,7 @@ def run(
     duration: str | None,
     scenario: str | None,
     json_output: str | None,
+    event_log: str | None,
     quiet: bool,
 ) -> None:
     """Run a load test script.
@@ -70,7 +72,12 @@ def run(
     from rampa.runner import status_to_exit_code
 
     result = asyncio.run(
-        run_test(plan, json_output_path=json_output, quiet=quiet),
+        run_test(
+            plan,
+            json_output_path=json_output,
+            quiet=quiet,
+            event_log_path=event_log,
+        ),
     )
     sys.exit(status_to_exit_code(result.status))
 
