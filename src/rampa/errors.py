@@ -29,6 +29,7 @@ class ExitCode(enum.IntEnum):
     ABORTED = 4
     SETUP_FAILURE = 5
     OUTPUT_FAILURE = 6
+    TEARDOWN_FAILURE = 7
 
 
 class RampaError(Exception):
@@ -111,3 +112,15 @@ class OutputError(RampaError):
 
     def __init__(self, message: str) -> None:
         super().__init__(message, ExitCode.OUTPUT_FAILURE)
+
+
+class TeardownError(RampaError):
+    """Teardown function raised an exception.
+
+    >>> err = TeardownError("teardown() failed")
+    >>> err.exit_code
+    <ExitCode.TEARDOWN_FAILURE: 7>
+    """
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message, ExitCode.TEARDOWN_FAILURE)
