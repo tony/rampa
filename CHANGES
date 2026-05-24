@@ -16,39 +16,70 @@ with correct exit codes.
 The core engine is fully decoupled from CLI presentation. {class}`Engine`
 constructs per-run state and returns a {class}`RunController` with
 `wait()`, `stop()`, `snapshot()`, and `events()` methods. Frontends
-(CLI, TUI, MCP, pytest) consume the same headless API without reaching
-into engine internals.
+consume the same headless API without reaching into engine internals. (#1)
+
+#### EventBus for multi-consumer event delivery
+
+{class}`EventBus` broadcasts {class}`PhaseEvent`, {class}`SnapshotEvent`,
+and {class}`ThresholdEvent` to any number of concurrent subscribers.
+Thread-safe publishing bridges the metric engine thread to the asyncio
+event loop via ``publish_threadsafe()``. (#1)
 
 #### Six executor types
 
-All six k6-equivalent scheduling models are implemented: `constant-vus`,
-`ramping-vus`, `shared-iterations`, `per-vu-iterations`,
-`constant-arrival-rate`, and `ramping-arrival-rate`. The arrival-rate
-executors use open-model scheduling with `dropped_iterations` accounting.
+All k6-equivalent scheduling models: ``constant-vus``, ``ramping-vus``,
+``shared-iterations``, ``per-vu-iterations``, ``constant-arrival-rate``,
+and ``ramping-arrival-rate``. Arrival-rate executors use open-model
+scheduling with ``dropped_iterations`` accounting. (#1)
 
 #### Typed metric model
 
-Four metric types (Counter, Gauge, Rate, Trend) with a {class}`SinkProtocol`
-for future Rust acceleration. The metric engine runs in a dedicated thread,
-draining samples from a `queue.SimpleQueue` on a 50ms timer. Built-in
-metrics cover execution, HTTP timing, checks, and data transfer.
+Counter, Gauge, Rate, and Trend sink types behind {class}`SinkProtocol`.
+The metric engine runs in a dedicated thread, draining samples from a
+``queue.SimpleQueue`` on a 50ms timer. Built-in metrics cover execution,
+HTTP timing, checks, VU counts, and data transfer. (#1)
 
 #### HTTP client with automatic metrics
 
-The {class}`HttpClient` wraps aiohttp and auto-emits timing metrics for
-every request: `http_reqs`, `http_req_duration`, `http_req_failed`, and
-per-phase timing metrics.
+{class}`HttpClient` wraps aiohttp and auto-emits timing metrics for every
+request: ``http_reqs``, ``http_req_duration``, ``http_req_failed``, data
+transfer counters, and per-phase timing via aiohttp ``TraceConfig``. (#1)
+
+#### CLI with ``run``, ``check``, and ``doctor`` commands
+
+``rampa run`` executes test scripts with ``--vus``, ``--duration``,
+``--scenario``, ``--out``, ``--event-log``, and ``--quiet`` options.
+``rampa check`` validates scripts without running them.
+``rampa doctor`` reports environment diagnostics. (#1)
+
+#### MCP server
+
+``rampa-mcp`` entry point with tools for starting, stopping, and querying
+load test runs. Process-local {class}`RunRegistry` tracks active and
+completed runs with metric snapshots and threshold results. (#1)
+
+#### pytest plugin
+
+``@pytest.mark.rampa_scenario`` marker and ``rampa_result`` fixture run
+scenarios inside pytest tests. Registered via ``pytest11`` entry point. (#1)
 
 #### Threshold expressions
 
-Threshold expressions like `p(95)<500` and `rate<0.01` evaluate against
-metric sinks and determine pass/fail exit codes. Submetric tag filtering
-is parsed but not yet applied.
+Expressions like ``p(95)<500`` and ``rate<0.01`` evaluate against metric
+sinks and determine pass/fail exit codes. (#1)
+
+#### ``--event-log`` JSONL output
+
+``rampa run --event-log <path>`` writes a JSONL event stream for
+postmortem analysis — every phase transition, metric snapshot, and
+threshold result as a JSON line. (#1)
+
+### Development
 
 #### Benchmark scripts
 
-Four benchmark scripts measure scheduler precision, throughput, metric
-engine ingestion rate, and HTTP overhead. All produce JSON output for
-CI regression tracking.
+Benchmark scripts measure scheduler precision, throughput, metric engine
+ingestion rate, and HTTP overhead. All produce JSON output for CI
+regression tracking. (#1)
 
 <!-- KEEP THIS PLACEHOLDER - DO NOT REMOVE OR MODIFY THIS LINE -->
