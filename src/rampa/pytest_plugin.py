@@ -54,15 +54,7 @@ def rampa_result(request: pytest.FixtureRequest) -> RunResult:
     RunResult
         The completed test run result.
 
-    Examples
-    --------
-    .. code-block:: python
-
-        @pytest.mark.rampa_scenario(
-            executor="constant-vus", vus=2, duration="500ms",
-        )
-        def test_my_api(rampa_result: RunResult) -> None:
-            assert rampa_result.status == RunStatus.PASSED
+    >>> import rampa.pytest_plugin
     """
     marker = request.node.get_closest_marker("rampa_scenario")
     if marker is None:
