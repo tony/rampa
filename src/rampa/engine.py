@@ -303,6 +303,7 @@ class Engine:
 
         finally:
             metric_engine.stop()
+            await asyncio.sleep(0)
             snapshot = metric_engine.get_latest_snapshot()
 
             threshold_results = []
