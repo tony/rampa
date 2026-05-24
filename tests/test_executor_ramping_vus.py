@@ -72,7 +72,7 @@ def test_ramping_vus_respects_abort() -> None:
             vus=2,
             stages=[
                 Stage(
-                    duration=datetime.timedelta(seconds=10),
+                    duration=datetime.timedelta(seconds=1),
                     target=5,
                 ),
             ],
