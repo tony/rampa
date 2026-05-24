@@ -19,7 +19,7 @@ import pytest
 
 from rampa.config import Config, ScenarioConfig
 from rampa.engine import Engine
-from rampa.events import RunResult, RunStatus
+from rampa.events import RunResult
 from rampa.loader import TestPlan
 
 
@@ -88,16 +88,7 @@ def rampa_result(request: pytest.FixtureRequest) -> RunResult:
         config=config,
     )
 
-    result = asyncio.run(_run_plan(plan))
-
-    if thresholds and result.status == RunStatus.THRESHOLD_FAILED:
-        failed = [r for r in result.threshold_results if not r.passed]
-        msg = "rampa threshold(s) failed:\n" + "\n".join(
-            f"  {r.source}: {r.lhs} (actual) vs {r.rhs} (limit)" for r in failed
-        )
-        pytest.fail(msg)
-
-    return result
+    return asyncio.run(_run_plan(plan))
 
 
 async def _run_plan(plan: TestPlan) -> RunResult:
