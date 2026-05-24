@@ -26,7 +26,7 @@ def drain_queue(sq: queue.SimpleQueue[Sample | None]) -> list[Sample]:
     while True:
         try:
             s = sq.get_nowait()
-        except Exception:
+        except queue.Empty:
             break
         if s is not None:
             samples.append(s)

@@ -527,7 +527,7 @@ class MetricEngine:
         while self._running:
             try:
                 sample = self.sample_queue.get(timeout=self.flush_interval)
-            except Exception:
+            except queue.Empty:
                 sample = None
 
             if sample is not None:
@@ -545,7 +545,7 @@ class MetricEngine:
         while True:
             try:
                 sample = self.sample_queue.get_nowait()
-            except Exception:
+            except queue.Empty:
                 break
             if sample is not None:
                 self._ingest(sample)
