@@ -1,8 +1,9 @@
 """HTTP client with automatic metric emission for rampa.
 
 Wraps ``aiohttp.ClientSession`` and emits timing metrics for every request:
-``http_reqs``, ``http_req_duration``, ``http_req_failed``, and data transfer
-counters.
+``http_reqs``, ``http_req_duration``, ``http_req_failed``, data transfer
+counters, and per-phase timing (blocked, connecting, sending, waiting,
+receiving).
 
 >>> import rampa.http
 """
@@ -100,6 +101,91 @@ def _estimate_request_size(kwargs: dict[str, t.Any]) -> int:
     return 0
 
 
+class _TraceTimings:
+    """Per-request timing accumulator for aiohttp trace signals.
+
+    Accepts and ignores ``trace_request_ctx`` so it can be used as
+    an aiohttp ``trace_config_ctx_factory``.
+
+    >>> t = _TraceTimings()
+    >>> t.request_start
+    0
+    """
+
+    def __init__(self, **kwargs: t.Any) -> None:
+        self.request_start: int = 0
+        self.connection_create_start: int = 0
+        self.connection_create_end: int = 0
+        self.request_headers_sent: int = 0
+        self.first_response_chunk: int = 0
+        self.request_end: int = 0
+
+
+def _build_trace_config(client: t.Any) -> aiohttp.TraceConfig:
+    """Build an aiohttp TraceConfig that records per-phase timings.
+
+    The timings are stored on the trace request context object
+    (a ``_TraceTimings`` instance) and read back by the caller
+    after the request completes.
+
+    >>> import rampa.http
+    """
+    tc = aiohttp.TraceConfig(trace_config_ctx_factory=_TraceTimings)  # ty: ignore[invalid-argument-type]
+
+    async def _on_request_start(
+        session: aiohttp.ClientSession,
+        ctx: _TraceTimings,
+        params: aiohttp.TraceRequestStartParams,
+    ) -> None:
+        ctx.request_start = time.monotonic_ns()
+        client._current_timings = ctx
+
+    async def _on_connection_create_start(
+        session: aiohttp.ClientSession,
+        ctx: _TraceTimings,
+        params: aiohttp.TraceConnectionCreateStartParams,
+    ) -> None:
+        ctx.connection_create_start = time.monotonic_ns()
+
+    async def _on_connection_create_end(
+        session: aiohttp.ClientSession,
+        ctx: _TraceTimings,
+        params: aiohttp.TraceConnectionCreateEndParams,
+    ) -> None:
+        ctx.connection_create_end = time.monotonic_ns()
+
+    async def _on_request_headers_sent(
+        session: aiohttp.ClientSession,
+        ctx: _TraceTimings,
+        params: aiohttp.TraceRequestHeadersSentParams,
+    ) -> None:
+        ctx.request_headers_sent = time.monotonic_ns()
+
+    async def _on_response_chunk_received(
+        session: aiohttp.ClientSession,
+        ctx: _TraceTimings,
+        params: aiohttp.TraceResponseChunkReceivedParams,
+    ) -> None:
+        if ctx.first_response_chunk == 0:
+            ctx.first_response_chunk = time.monotonic_ns()
+
+    async def _on_request_end(
+        session: aiohttp.ClientSession,
+        ctx: _TraceTimings,
+        params: aiohttp.TraceRequestEndParams,
+    ) -> None:
+        ctx.request_end = time.monotonic_ns()
+
+    tc.on_request_start.append(_on_request_start)
+    tc.on_connection_create_start.append(_on_connection_create_start)
+    tc.on_connection_create_end.append(_on_connection_create_end)
+    tc.on_request_headers_sent.append(_on_request_headers_sent)
+    tc.on_response_chunk_received.append(_on_response_chunk_received)
+    tc.on_request_end.append(_on_request_end)
+
+    return tc
+
+
 class HttpClient:
     """HTTP client that auto-emits metrics for every request.
 
@@ -125,10 +211,14 @@ class HttpClient:
         self._queue = sample_queue
         self._tags = tags
         self._session: aiohttp.ClientSession | None = None
+        self._current_timings: _TraceTimings | None = None
 
     async def _ensure_session(self) -> aiohttp.ClientSession:
         if self._session is None or self._session.closed:
-            self._session = aiohttp.ClientSession()
+            self._trace_config = _build_trace_config(self)
+            self._session = aiohttp.ClientSession(
+                trace_configs=[self._trace_config],
+            )
         return self._session
 
     async def __aenter__(self) -> HttpClient:
@@ -154,6 +244,45 @@ class HttpClient:
         if extra_tags:
             tags.update(extra_tags)
         self._queue.put(make_sample(metric, value, tags))
+
+    def _emit_phase_timings(self, request_tags: dict[str, str]) -> None:
+        t = self._current_timings
+        if t is None or t.request_start == 0:
+            return
+
+        def _ms(start: int, end: int) -> float:
+            if start == 0 or end == 0:
+                return 0.0
+            return max(0.0, (end - start) / 1_000_000)
+
+        self._emit(
+            "http_req_blocked",
+            _ms(t.request_start, t.connection_create_start or t.request_headers_sent),
+            request_tags,
+        )
+        self._emit(
+            "http_req_connecting",
+            _ms(t.connection_create_start, t.connection_create_end),
+            request_tags,
+        )
+        self._emit(
+            "http_req_sending",
+            _ms(
+                t.connection_create_end or t.request_start,
+                t.request_headers_sent,
+            ),
+            request_tags,
+        )
+        self._emit(
+            "http_req_waiting",
+            _ms(t.request_headers_sent, t.first_response_chunk or t.request_end),
+            request_tags,
+        )
+        self._emit(
+            "http_req_receiving",
+            _ms(t.first_response_chunk, t.request_end),
+            request_tags,
+        )
 
     async def request(
         self,
@@ -200,6 +329,8 @@ class HttpClient:
                 self._emit("data_sent", float(sent_bytes), request_tags)
                 content_length = len(body)
                 self._emit("data_received", float(content_length), request_tags)
+
+                self._emit_phase_timings(request_tags)
 
                 headers = dict(resp.headers.items())
 
