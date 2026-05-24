@@ -350,6 +350,7 @@ class HttpClient:
             self._emit("http_req_duration", elapsed_ms, request_tags)
             self._emit("http_req_failed", 1.0, request_tags)
             self._emit("data_sent", float(sent_bytes), request_tags)
+            self._emit_phase_timings(request_tags)
             raise
 
     async def get(self, url: str, **kwargs: t.Any) -> Response:
