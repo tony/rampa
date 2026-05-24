@@ -43,6 +43,7 @@ mcp = ["fastmcp>=2.0"]
 
 [project.scripts]
 rampa = "rampa.cli:main"
+rampa-mcp = "rampa.mcp.server:main"
 
 [project.urls]
 "Bug Tracker" = "https://github.com/tony/rampa/issues"
