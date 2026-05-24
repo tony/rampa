@@ -74,10 +74,10 @@ def test_controller_stop_produces_result() -> None:
     """controller.stop() stops executors and produces a final result."""
 
     async def _slow(w: object) -> None:
-        await asyncio.sleep(10.0)
+        await asyncio.sleep(0.2)
 
     async def _run() -> None:
-        plan = _make_plan(_slow, duration_ms=10000)
+        plan = _make_plan(_slow, duration_ms=1000)
         controller = await Engine(plan).start()
 
         await asyncio.sleep(0.05)
