@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import datetime
 import queue
 import typing as t
@@ -199,3 +200,33 @@ def test_create_executor_valid() -> None:
     )
     executor = create_executor(cfg)
     assert isinstance(executor, ConstantVUsExecutor)
+
+
+def test_cancelled_iteration_still_emits_metrics() -> None:
+    """Iteration metrics are emitted even when CancelledError propagates."""
+    from rampa.executors import run_iteration
+
+    async def _slow(w: object) -> None:
+        await asyncio.sleep(10.0)
+
+    async def _run() -> list[Sample]:
+        sq: queue.SimpleQueue[Sample | None] = queue.SimpleQueue()
+        state = ExecutionState(
+            sample_queue=sq,
+            abort_event=asyncio.Event(),
+            worker_fn=_slow,
+            scenario="test",
+        )
+
+        task = asyncio.create_task(run_iteration(state))
+        await asyncio.sleep(0.01)
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
+
+        return _drain(sq)
+
+    samples = asyncio.run(_run())
+    metrics = [s.metric for s in samples]
+    assert "iterations" in metrics
+    assert "iteration_duration" in metrics

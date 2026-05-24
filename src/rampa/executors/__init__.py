@@ -110,9 +110,10 @@ class ExecutionState:
 async def run_iteration(state: ExecutionState) -> None:
     """Execute one user iteration with timing, error handling, and cleanup.
 
-    Creates a worker, invokes the user function, emits ``iterations``,
-    ``iteration_duration``, and optionally ``iteration_errors`` samples,
-    then closes any HTTP resources.
+    Creates a worker, invokes the user function, then in a finally block
+    closes any HTTP resources and emits ``iterations``,
+    ``iteration_duration``, and optionally ``iteration_errors`` samples.
+    Metrics are emitted even when ``CancelledError`` propagates.
 
     Parameters
     ----------
@@ -141,17 +142,17 @@ async def run_iteration(state: ExecutionState) -> None:
     finally:
         if worker._http is not None:
             await worker._http.close()
-    elapsed_ns = time.monotonic_ns() - start
-    state.sample_queue.put(
-        make_sample("iterations", 1.0, {"scenario": state.scenario}),
-    )
-    state.sample_queue.put(
-        make_sample(
-            "iteration_duration",
-            elapsed_ns / 1_000_000,
-            {"scenario": state.scenario},
-        ),
-    )
+        elapsed_ns = time.monotonic_ns() - start
+        state.sample_queue.put(
+            make_sample("iterations", 1.0, {"scenario": state.scenario}),
+        )
+        state.sample_queue.put(
+            make_sample(
+                "iteration_duration",
+                elapsed_ns / 1_000_000,
+                {"scenario": state.scenario},
+            ),
+        )
 
 
 class Executor(t.Protocol):
