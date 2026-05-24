@@ -56,8 +56,12 @@ class ConstantVUsExecutor:
         deadline = asyncio.get_running_loop().time() + self._duration
         loop = asyncio.get_running_loop()
 
-        while loop.time() < deadline and not state.abort_event.is_set():
-            await run_iteration(state)
+        state.vu_started()
+        try:
+            while loop.time() < deadline and not state.abort_event.is_set():
+                await run_iteration(state)
+        finally:
+            state.vu_stopped()
 
 
 register_executor("constant-vus", ConstantVUsExecutor)

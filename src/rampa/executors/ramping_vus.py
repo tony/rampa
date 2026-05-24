@@ -84,8 +84,12 @@ class RampingVUsExecutor:
 
     async def _run_vu(self, state: ExecutionState) -> None:
         """Single VU loop: iterate until cancelled or aborted."""
-        while not state.abort_event.is_set():
-            await run_iteration(state)
+        state.vu_started()
+        try:
+            while not state.abort_event.is_set():
+                await run_iteration(state)
+        finally:
+            state.vu_stopped()
 
 
 register_executor("ramping-vus", RampingVUsExecutor)

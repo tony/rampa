@@ -44,10 +44,14 @@ class PerVUIterationsExecutor:
         """
 
         async def _vu() -> None:
-            for _ in range(self._iterations_per_vu):
-                if state.abort_event.is_set():
-                    break
-                await run_iteration(state)
+            state.vu_started()
+            try:
+                for _ in range(self._iterations_per_vu):
+                    if state.abort_event.is_set():
+                        break
+                    await run_iteration(state)
+            finally:
+                state.vu_stopped()
 
         async with asyncio.TaskGroup() as tg:
             for _ in range(self._vus):

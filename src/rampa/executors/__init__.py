@@ -61,6 +61,8 @@ class ExecutionState:
     setup_data: t.Any = None
     _iteration_counter: int = field(default=0, repr=False)
     _worker_id_counter: int = field(default=0, repr=False)
+    _active_vus: int = field(default=0, repr=False)
+    _peak_vus: int = field(default=0, repr=False)
 
     def next_iteration(self) -> int:
         """Return and increment the iteration counter.
@@ -104,6 +106,54 @@ class ExecutionState:
                 iteration=iteration,
             ),
             setup_data=self.setup_data,
+        )
+
+    def vu_started(self) -> None:
+        """Record a VU becoming active and emit vus/vus_max samples.
+
+        >>> import asyncio
+        >>> state = ExecutionState(
+        ...     sample_queue=queue.SimpleQueue(),
+        ...     abort_event=asyncio.Event(),
+        ...     worker_fn=lambda w: None,
+        ...     scenario="test",
+        ... )
+        >>> state.vu_started()
+        >>> state._active_vus
+        1
+        """
+        self._active_vus += 1
+        self.sample_queue.put(
+            make_sample("vus", float(self._active_vus), {"scenario": self.scenario}),
+        )
+        if self._active_vus > self._peak_vus:
+            self._peak_vus = self._active_vus
+            self.sample_queue.put(
+                make_sample(
+                    "vus_max",
+                    float(self._peak_vus),
+                    {"scenario": self.scenario},
+                ),
+            )
+
+    def vu_stopped(self) -> None:
+        """Record a VU becoming inactive and emit a vus sample.
+
+        >>> import asyncio
+        >>> state = ExecutionState(
+        ...     sample_queue=queue.SimpleQueue(),
+        ...     abort_event=asyncio.Event(),
+        ...     worker_fn=lambda w: None,
+        ...     scenario="test",
+        ... )
+        >>> state.vu_started()
+        >>> state.vu_stopped()
+        >>> state._active_vus
+        0
+        """
+        self._active_vus -= 1
+        self.sample_queue.put(
+            make_sample("vus", float(self._active_vus), {"scenario": self.scenario}),
         )
 
 

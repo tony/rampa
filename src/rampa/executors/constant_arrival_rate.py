@@ -99,9 +99,11 @@ class ConstantArrivalRateExecutor:
         sem: asyncio.Semaphore,
     ) -> None:
         """Run one iteration and release the semaphore when done."""
+        state.vu_started()
         try:
             await run_iteration(state)
         finally:
+            state.vu_stopped()
             sem.release()
 
 

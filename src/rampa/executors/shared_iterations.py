@@ -46,9 +46,13 @@ class SharedIterationsExecutor:
 
         async def _vu() -> None:
             nonlocal remaining
-            while remaining > 0 and not state.abort_event.is_set():
-                remaining -= 1
-                await run_iteration(state)
+            state.vu_started()
+            try:
+                while remaining > 0 and not state.abort_event.is_set():
+                    remaining -= 1
+                    await run_iteration(state)
+            finally:
+                state.vu_stopped()
 
         async with asyncio.TaskGroup() as tg:
             for _ in range(self._vus):
