@@ -106,7 +106,8 @@ class RampingVUsExecutor:
                         ),
                     )
             finally:
-                await worker.http.close()
+                if worker._http is not None:
+                    await worker._http.close()
             elapsed_ns = time.monotonic_ns() - start
             state.sample_queue.put(
                 make_sample(

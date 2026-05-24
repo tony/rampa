@@ -66,10 +66,35 @@ class Worker:
         self._queue = sample_queue
         self.execution = execution
         self.setup_data = setup_data
-        self.http = HttpClient(
-            sample_queue,
-            {"scenario": execution.scenario},
-        )
+        self._http: HttpClient | None = None
+
+    @property
+    def http(self) -> HttpClient:
+        """Lazily-initialized HTTP client with automatic metric emission.
+
+        The client is created on first access, so non-HTTP scenarios
+        never allocate an aiohttp session.
+
+        >>> import queue as q
+        >>> sq: q.SimpleQueue[Sample | None] = q.SimpleQueue()
+        >>> w = Worker(
+        ...     sample_queue=sq,
+        ...     execution=ExecutionInfo(
+        ...         worker_id=1, scenario="s", iteration=0,
+        ...     ),
+        ... )
+        >>> w._http is None
+        True
+        >>> client = w.http
+        >>> w._http is not None
+        True
+        """
+        if self._http is None:
+            self._http = HttpClient(
+                self._queue,
+                {"scenario": self.execution.scenario},
+            )
+        return self._http
 
     def _emit(self, sample: Sample) -> None:
         """Push a sample to the metric engine queue."""

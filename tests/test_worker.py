@@ -161,3 +161,20 @@ def test_worker_isolation() -> None:
     assert "from_w1" in metrics
     assert "from_w2" in metrics
     assert w1.execution.worker_id != w2.execution.worker_id
+
+
+def test_http_not_allocated_when_unused() -> None:
+    """Worker does not allocate HttpClient until .http is accessed."""
+    w, _sq = _make_worker()
+    assert w._http is None
+    w.counter("my_metric")
+    assert w._http is None
+
+
+def test_http_allocated_on_access() -> None:
+    """Worker allocates HttpClient on first .http property access."""
+    w, _sq = _make_worker()
+    assert w._http is None
+    client = w.http
+    assert client is not None
+    assert w._http is client
