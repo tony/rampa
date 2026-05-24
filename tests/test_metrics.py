@@ -14,6 +14,7 @@ from rampa.metrics import (
     GaugeSink,
     MetricEngine,
     MetricRegistry,
+    MetricSnapshot,
     RateSink,
     TrendSink,
     register_builtins,
@@ -253,3 +254,39 @@ def test_metric_engine_drains_samples() -> None:
     snap = engine.get_latest_snapshot()
     assert snap is not None
     assert snap.values["iterations"]["count"] == 10.0
+
+
+def test_metric_engine_snapshots_bounded() -> None:
+    """MetricEngine stores at most 128 snapshots (bounded deque)."""
+    reg = MetricRegistry()
+    register_builtins(reg)
+    q: queue.SimpleQueue[Sample | None] = queue.SimpleQueue()
+    engine = MetricEngine(registry=reg, sample_queue=q, flush_interval=0.001)
+    engine.start()
+
+    q.put(Sample("iterations", 1.0, time.monotonic_ns(), {}))
+    time.sleep(0.3)
+    engine.stop()
+
+    assert len(engine._snapshots) <= 128
+
+
+def test_metric_engine_on_snapshot_callback() -> None:
+    """MetricEngine calls on_snapshot with each emitted snapshot."""
+    reg = MetricRegistry()
+    register_builtins(reg)
+    q: queue.SimpleQueue[Sample | None] = queue.SimpleQueue()
+    received: list[MetricSnapshot] = []
+    engine = MetricEngine(
+        registry=reg,
+        sample_queue=q,
+        on_snapshot=received.append,
+    )
+    engine.start()
+
+    q.put(Sample("iterations", 1.0, time.monotonic_ns(), {}))
+    time.sleep(0.15)
+    engine.stop()
+
+    assert len(received) > 0
+    assert all(isinstance(s, MetricSnapshot) for s in received)

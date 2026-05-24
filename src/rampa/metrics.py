@@ -9,6 +9,7 @@ The metric engine runs in a dedicated thread, draining samples from a
 
 from __future__ import annotations
 
+import collections
 import math
 import queue
 import threading
@@ -483,12 +484,12 @@ class MetricEngine:
     sample_queue: queue.SimpleQueue[Sample | None]
     flush_interval: float = 0.05
     on_sample: t.Callable[[Sample], None] | None = None
+    on_snapshot: t.Callable[[MetricSnapshot], None] | None = None
     _thread: threading.Thread = field(init=False, repr=False)
     _running: bool = field(init=False, default=False, repr=False)
     _start_time: float = field(init=False, default=0.0, repr=False)
-    _snapshots: list[MetricSnapshot] = field(
+    _snapshots: collections.deque[MetricSnapshot] = field(
         init=False,
-        default_factory=list,
         repr=False,
     )
     _snapshot_lock: threading.Lock = field(
@@ -498,7 +499,8 @@ class MetricEngine:
     )
 
     def __post_init__(self) -> None:
-        """Initialize the background thread."""
+        """Initialize the background thread and bounded snapshot storage."""
+        self._snapshots = collections.deque(maxlen=128)
         self._thread = threading.Thread(
             target=self._run,
             daemon=True,
@@ -576,3 +578,5 @@ class MetricEngine:
         )
         with self._snapshot_lock:
             self._snapshots.append(snapshot)
+        if self.on_snapshot is not None:
+            self.on_snapshot(snapshot)
