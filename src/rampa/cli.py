@@ -104,7 +104,11 @@ def check(script: str) -> None:
         if cfg.vus is not None:
             parts.append(f", {cfg.vus} VUs")
         if cfg.duration is not None:
-            parts.append(f", {cfg.duration.total_seconds():.0f}s")
+            secs = cfg.duration.total_seconds()
+            if secs >= 1:
+                parts.append(f", {secs:.0f}s")
+            else:
+                parts.append(f", {secs * 1000:.0f}ms")
         if cfg.iterations is not None:
             parts.append(f", {cfg.iterations} iterations")
         parts.append(")")
