@@ -183,6 +183,18 @@ class Worker:
             Current value.
         tags : dict[str, str] | None
             Optional tags.
+
+        >>> import queue as q
+        >>> sq: q.SimpleQueue[Sample | None] = q.SimpleQueue()
+        >>> w = Worker(
+        ...     sample_queue=sq,
+        ...     execution=ExecutionInfo(
+        ...         worker_id=1, scenario="s", iteration=0,
+        ...     ),
+        ... )
+        >>> w.gauge("queue_depth", 42.0)
+        >>> sq.get_nowait().value
+        42.0
         """
         self._emit(make_sample(name, value, tags))
 
@@ -202,5 +214,17 @@ class Worker:
             Observed value.
         tags : dict[str, str] | None
             Optional tags.
+
+        >>> import queue as q
+        >>> sq: q.SimpleQueue[Sample | None] = q.SimpleQueue()
+        >>> w = Worker(
+        ...     sample_queue=sq,
+        ...     execution=ExecutionInfo(
+        ...         worker_id=1, scenario="s", iteration=0,
+        ...     ),
+        ... )
+        >>> w.trend("latency", 123.4)
+        >>> sq.get_nowait().value
+        123.4
         """
         self._emit(make_sample(name, value, tags))
