@@ -62,6 +62,8 @@ class TestPlan:
     True
     """
 
+    __test__ = False
+
     scenarios: dict[str, tuple[ScenarioConfig, t.Callable[..., t.Any]]]
     config: Config
     setup_fn: t.Callable[..., t.Any] | None = None
