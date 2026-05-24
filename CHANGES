@@ -4,4 +4,51 @@
 
 ## rampa 0.0.1 (unreleased)
 
+rampa 0.0.1 ships the complete local load-testing engine. A user can
+write an async Python scenario function, run it from the CLI, and get
+trustworthy request metrics, checks, thresholds, and a readable summary
+with correct exit codes.
+
+### What's new
+
+#### Headless engine with typed events
+
+The core engine is fully decoupled from CLI presentation. {class}`Engine`
+constructs per-run state and returns a {class}`RunController` with
+`wait()`, `stop()`, `snapshot()`, and `events()` methods. Frontends
+(CLI, TUI, MCP, pytest) consume the same headless API without reaching
+into engine internals.
+
+#### Six executor types
+
+All six k6-equivalent scheduling models are implemented: `constant-vus`,
+`ramping-vus`, `shared-iterations`, `per-vu-iterations`,
+`constant-arrival-rate`, and `ramping-arrival-rate`. The arrival-rate
+executors use open-model scheduling with `dropped_iterations` accounting.
+
+#### Typed metric model
+
+Four metric types (Counter, Gauge, Rate, Trend) with a {class}`SinkProtocol`
+for future Rust acceleration. The metric engine runs in a dedicated thread,
+draining samples from a `queue.SimpleQueue` on a 50ms timer. Built-in
+metrics cover execution, HTTP timing, checks, and data transfer.
+
+#### HTTP client with automatic metrics
+
+The {class}`HttpClient` wraps aiohttp and auto-emits timing metrics for
+every request: `http_reqs`, `http_req_duration`, `http_req_failed`, and
+per-phase timing metrics.
+
+#### Threshold expressions
+
+Threshold expressions like `p(95)<500` and `rate<0.01` evaluate against
+metric sinks and determine pass/fail exit codes. Submetric tag filtering
+is parsed but not yet applied.
+
+#### Benchmark scripts
+
+Four benchmark scripts measure scheduler precision, throughput, metric
+engine ingestion rate, and HTTP overhead. All produce JSON output for
+CI regression tracking.
+
 <!-- KEEP THIS PLACEHOLDER - DO NOT REMOVE OR MODIFY THIS LINE -->
