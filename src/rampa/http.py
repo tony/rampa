@@ -67,6 +67,39 @@ class Response:
         return self.body.decode("utf-8", errors="replace")
 
 
+def _estimate_request_size(kwargs: dict[str, t.Any]) -> int:
+    """Estimate the size of an outgoing request body in bytes.
+
+    Parameters
+    ----------
+    kwargs : dict[str, Any]
+        Request keyword arguments.
+
+    Returns
+    -------
+    int
+        Estimated body size in bytes.
+
+    >>> _estimate_request_size({"data": "hello"})
+    5
+    >>> _estimate_request_size({"data": b"bytes"})
+    5
+    >>> _estimate_request_size({})
+    0
+    """
+    data = kwargs.get("data")
+    if data is not None:
+        if isinstance(data, (str, bytes)):
+            return len(data)
+        return 0
+    json_data = kwargs.get("json")
+    if json_data is not None:
+        import json
+
+        return len(json.dumps(json_data).encode())
+    return 0
+
+
 class HttpClient:
     """HTTP client that auto-emits metrics for every request.
 
@@ -134,6 +167,8 @@ class HttpClient:
         session = await self._ensure_session()
         request_tags = {"method": method, "url": url}
 
+        sent_bytes = _estimate_request_size(kwargs)
+
         start_ns = time.monotonic_ns()
         try:
             async with session.request(method, url, **kwargs) as resp:
@@ -149,6 +184,7 @@ class HttpClient:
                 failed = 0.0 if 200 <= resp.status < 400 else 1.0
                 self._emit("http_req_failed", failed, request_tags)
 
+                self._emit("data_sent", float(sent_bytes), request_tags)
                 content_length = len(body)
                 self._emit("data_received", float(content_length), request_tags)
 
@@ -169,6 +205,7 @@ class HttpClient:
             self._emit("http_reqs", 1.0, request_tags)
             self._emit("http_req_duration", elapsed_ms, request_tags)
             self._emit("http_req_failed", 1.0, request_tags)
+            self._emit("data_sent", float(sent_bytes), request_tags)
             raise
 
     async def get(self, url: str, **kwargs: t.Any) -> Response:
