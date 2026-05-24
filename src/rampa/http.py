@@ -131,6 +131,19 @@ class HttpClient:
             self._session = aiohttp.ClientSession()
         return self._session
 
+    async def __aenter__(self) -> HttpClient:
+        """Enter async context manager."""
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: object,
+    ) -> None:
+        """Exit async context manager and close the session."""
+        await self.close()
+
     async def close(self) -> None:
         """Close the underlying HTTP session."""
         if self._session is not None and not self._session.closed:
