@@ -196,7 +196,7 @@ def test_snapshot_events_emitted() -> None:
     async def _run() -> bool:
         from rampa.events import SnapshotEvent
 
-        plan = _make_plan(_noop, duration_ms=300)
+        plan = _make_plan(_noop, duration_ms=150)
         controller = await Engine(plan).start()
 
         found_snapshot = False
