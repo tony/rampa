@@ -1,0 +1,65 @@
+{#
+  Library install widget: one row of method tabs, one panel per method.
+  Mirrors the mcp-install and cli-install widgets' outer structure.
+
+  Three methods cover the canonical library-consumption shapes:
+  ``uv-script`` (PEP 723 inline metadata), ``uv-add`` (project), and
+  ``pip`` (traditional). Each panel carries two code blocks whose
+  Pygments lexer differs by method, so the template uses
+  ``panel.code_a_lang`` / ``panel.code_b_lang`` instead of hard-coded
+  language args.
+
+  The first panel is visible by default; widget.js mirrors localStorage
+  onto <html data-library-install-method=...> and the CSS in widget.css
+  swaps panel visibility based on that attribute.
+#}
+<div class="rp-library-install">
+  <div class="rp-library-install__tabs" role="tablist" aria-label="Install method">
+    {% for method in methods %}
+    <button type="button"
+            class="rp-library-install__tab"
+            role="tab"
+            data-tab-kind="method"
+            data-tab-value="{{ method.id }}"
+            aria-selected="{{ 'true' if method.id == default_method else 'false' }}"
+            tabindex="{{ '0' if method.id == default_method else '-1' }}">
+      {{ method.label }}
+    </button>
+    {% endfor %}
+  </div>
+
+  <div class="rp-library-install__body">
+    {% for panel in panels %}
+    <div class="rp-library-install__panel"
+         role="tabpanel"
+         data-method="{{ panel.method.id }}"
+         tabindex="0"
+         {% if not panel.is_default %}hidden{% endif %}>
+
+      {% if panel.method.id == 'uv-script' %}
+      <p class="rp-library-install__preamble">
+        Save this as <code>example.py</code>. The
+        <a href="https://peps.python.org/pep-0723/" target="_blank" rel="noopener">PEP 723</a>
+        inline-metadata header declares <code>rampa</code> as a
+        dependency, so <a href="{{ panel.method.doc_url }}" target="_blank" rel="noopener">uv</a>
+        resolves and runs the script in an ephemeral environment:
+      </p>
+      {% elif panel.method.doc_url %}
+      <p class="rp-library-install__preamble">
+        With <a href="{{ panel.method.doc_url }}" target="_blank" rel="noopener">{{ panel.method.label }}</a> installed:
+      </p>
+      {% endif %}
+
+      {{ panel.code_a_body | highlight(panel.code_a_lang) }}
+
+      {% if panel.method.id == 'uv-script' %}
+      <p class="rp-library-install__preamble">Then run it:</p>
+      {% else %}
+      <p class="rp-library-install__preamble">Then drive the library from Python:</p>
+      {% endif %}
+
+      {{ panel.code_b_body | highlight(panel.code_b_lang) }}
+    </div>
+    {% endfor %}
+  </div>
+</div>

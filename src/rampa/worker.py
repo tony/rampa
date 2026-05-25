@@ -47,6 +47,8 @@ class Worker:
     setup_data : Any
         Data returned from the setup() function.
 
+    Examples
+    --------
     >>> import queue as q
     >>> sq: q.SimpleQueue[Sample | None] = q.SimpleQueue()
     >>> w = Worker(
@@ -178,6 +180,8 @@ class Worker:
         tags : dict[str, str] | None
             Optional tags.
 
+        Examples
+        --------
         >>> import queue as q
         >>> sq: q.SimpleQueue[Sample | None] = q.SimpleQueue()
         >>> w = Worker(
@@ -209,6 +213,8 @@ class Worker:
         tags : dict[str, str] | None
             Optional tags.
 
+        Examples
+        --------
         >>> import queue as q
         >>> sq: q.SimpleQueue[Sample | None] = q.SimpleQueue()
         >>> w = Worker(
@@ -240,6 +246,8 @@ class Worker:
         tags : dict[str, str] | None
             Optional tags.
 
+        Examples
+        --------
         >>> import queue as q
         >>> sq: q.SimpleQueue[Sample | None] = q.SimpleQueue()
         >>> w = Worker(

@@ -1,0 +1,560 @@
+"""Prevent flash-of-wrong-selection on the ``mcp-install`` widget.
+
+The widget's server-rendered HTML always marks the first
+client/method/scope tab ``aria-selected="true"`` and ``hidden=""`` on
+every panel except the ``(claude-code, uvx, local, off)`` cell.
+``widget.js`` then reads ``localStorage`` and mutates the DOM to the
+user's saved selection — a visible flash on initial page paint and on
+every gp-sphinx SPA navigation between docs pages.
+
+This module emits an inline ``<head>`` script that copies the saved
+selection from ``localStorage`` onto ``<html>`` as
+``data-mcp-install-client`` / ``data-mcp-install-method`` /
+``data-mcp-install-scope`` / ``data-mcp-install-cooldown-enabled`` /
+``data-mcp-install-cooldown-type`` / ``data-mcp-install-cooldown-days``
+attributes *before first paint*, plus a ``<style>`` block whose
+attribute-selector rules drive the active tab + visible scope group +
+visible panel from those attributes. ``<html>`` is never replaced by
+gp-sphinx's ``spa-nav.js`` (it only swaps ``.article-container``), so
+the attributes survive SPA navigation and the new article paints in
+the saved state without the head script needing to re-run.
+
+Scope is **per-client**: the localStorage key is
+``rampa.mcp-install.scope.<client_id>``.
+
+Cooldown state is **three orthogonal axes**:
+
+* ``rampa.mcp-install.cooldown.enabled`` — ``"1"`` / ``"0"`` —
+  master on/off switch.
+* ``rampa.mcp-install.cooldown.type`` — ``"days"`` / ``"bypass"`` —
+  cooldown flavor when enabled.
+* ``rampa.mcp-install.cooldown.days`` — int — day count when
+  ``type=days``.
+
+The ``cooldown-days`` attribute is read by ``widget.js`` (not by these
+CSS rules) to populate the per-snippet
+``[data-cooldown-duration-slot]`` / ``[data-cooldown-date-slot]``
+spans. The CSS panel rule keys on the ``enabled`` + ``type`` pair to
+pick which panel variant is visible.
+"""
+
+from __future__ import annotations
+
+import json
+import typing as t
+
+from .mcp_install import (
+    CLIENTS,
+    DEFAULT_COOLDOWN_DAYS,
+    DEFAULT_COOLDOWN_ENABLED,
+    DEFAULT_COOLDOWN_TYPE,
+    DEFAULT_SCOPES,
+    METHODS,
+)
+
+if t.TYPE_CHECKING:
+    from sphinx.application import Sphinx
+
+
+# Every prehydrate declaration is ``!important``. The whole block lives in
+# ``@layer mcp-install-prehydrate`` (see :func:`_build_style`) and per CSS
+# Cascade Level 5 only ``!important`` declarations get the layer-priority
+# *reversal* that makes a layered rule outrank an unlayered one. Normal
+# (non-``!important``) rules in a layer LOSE to unlayered rules of the
+# same specificity — which is what bit the original tab rules: they were
+# specific enough to beat ``widget.css``'s ``.tab[aria-selected="true"]``
+# unlayered, but became powerless once we wrapped the prehydrate in a
+# layer to fix the panel cascade against ``furo-tw``'s ``[hidden]``
+# preflight.
+_TAB_DEACTIVATE_RULE = (
+    "html[data-mcp-install-client] .rp-mcp-install__tab"
+    '[data-tab-kind="client"][aria-selected="true"],'
+    "html[data-mcp-install-method] .rp-mcp-install__tab"
+    '[data-tab-kind="method"][aria-selected="true"],'
+    "html[data-mcp-install-scope] .rp-mcp-install__tab"
+    '[data-tab-kind="scope"][aria-selected="true"]'
+    "{color:var(--color-foreground-muted) !important;"
+    "border-bottom-color:transparent !important;"
+    "background:transparent !important}"
+)
+
+_TAB_ACTIVE_DECL = (
+    "{color:var(--color-brand-primary) !important;"
+    "border-bottom-color:var(--color-brand-primary) !important;"
+    "background:var(--color-background-primary) !important}"
+)
+
+_PANEL_HIDE_RULE = (
+    "html[data-mcp-install-client] .rp-mcp-install__panel:not([hidden]){display:none !important}"
+)
+
+_PANEL_ACTIVE_DECL = "{display:block !important}"
+
+_SCOPE_GROUP_ACTIVE_DECL = "{display:flex !important}"
+
+
+# Native ``<input type="checkbox">`` doesn't react to a CSS attribute
+# selector — its rendered glyph follows the ``.checked`` property, which
+# only ``widget.js`` can set (and only after DOMContentLoaded). That
+# produced a visible unchecked → checked flicker on every reload when
+# ``cooldown.enabled = "1"`` was saved. Strip the native UI with
+# ``appearance: none`` and re-render the checkbox visual from CSS keyed
+# off ``html[data-mcp-install-cooldown-enabled="1"]`` so the prehydrate
+# ``<head>`` script (which sets that attribute before first paint) drives
+# the visual without waiting for JS. ``.checked`` is still synced on
+# DOMContentLoaded for accessibility and click-handler correctness — the
+# sync is invisible because CSS already shows the right state.
+_COOLDOWN_TOGGLE_RULES = (
+    # Reset native chrome and own the box.
+    ".rp-mcp-install__cooldown-toggle"
+    "{appearance:none !important;"
+    "-webkit-appearance:none !important;"
+    "width:0.95em !important;"
+    "height:0.95em !important;"
+    "margin:0 !important;"
+    "border:1.5px solid var(--color-foreground-muted) !important;"
+    "border-radius:0.2em !important;"
+    "background:var(--color-background-primary) !important;"
+    "cursor:pointer !important;"
+    "position:relative !important;"
+    "flex:0 0 auto !important}"
+    # Checked appearance (brand-coloured fill + border).
+    'html[data-mcp-install-cooldown-enabled="1"]'
+    " .rp-mcp-install__cooldown-toggle"
+    "{background:var(--color-brand-primary) !important;"
+    "border-color:var(--color-brand-primary) !important}"
+    # Check mark via a centred ``✓`` pseudo. White on brand blue is
+    # legible in both light and dark modes (brand-primary stays blue).
+    'html[data-mcp-install-cooldown-enabled="1"]'
+    " .rp-mcp-install__cooldown-toggle::after"
+    '{content:"✓" !important;'
+    "position:absolute !important;"
+    "inset:0 !important;"
+    "display:flex !important;"
+    "align-items:center !important;"
+    "justify-content:center !important;"
+    "color:#fff !important;"
+    "font-size:0.85em !important;"
+    "font-weight:700 !important;"
+    "line-height:1 !important}"
+    # Focus ring — accessibility unchanged from native.
+    ".rp-mcp-install__cooldown-toggle:focus-visible"
+    "{outline:2px solid var(--color-brand-primary) !important;"
+    "outline-offset:2px !important}"
+)
+
+
+def _script() -> str:
+    """Inline ``<head>`` script that mirrors localStorage onto ``<html>``.
+
+    Emits a ``DEFAULT_SCOPES`` object literal derived from
+    :data:`mcp_install.DEFAULT_SCOPES`, plus the cooldown defaults
+    (``enabled`` / ``type`` / ``days``). Adding a client / scope /
+    cooldown mode in Python auto-extends the script.
+    """
+    defaults_literal = json.dumps(dict(DEFAULT_SCOPES), separators=(",", ":"))
+    enabled_default = "1" if DEFAULT_COOLDOWN_ENABLED else "0"
+    return (
+        '<script data-cfasync="false">(function(){'
+        "try{"
+        "var h=document.documentElement;"
+        f"var d={defaults_literal};"
+        'var c=localStorage.getItem("rampa.mcp-install.client")||"' + CLIENTS[0].id + '";'
+        'var m=localStorage.getItem("rampa.mcp-install.method")||"' + METHODS[0].id + '";'
+        'var s=localStorage.getItem("rampa.mcp-install.scope."+c)||d[c];'
+        'var ce=localStorage.getItem("rampa.mcp-install.cooldown.enabled")||"'
+        + enabled_default
+        + '";'
+        'var ct=localStorage.getItem("rampa.mcp-install.cooldown.type")||"'
+        + DEFAULT_COOLDOWN_TYPE
+        + '";'
+        'var cd=localStorage.getItem("rampa.mcp-install.cooldown.days")||"'
+        + str(DEFAULT_COOLDOWN_DAYS)
+        + '";'
+        'if(c)h.setAttribute("data-mcp-install-client",c);'
+        'if(m)h.setAttribute("data-mcp-install-method",m);'
+        'if(s)h.setAttribute("data-mcp-install-scope",s);'
+        'h.setAttribute("data-mcp-install-cooldown-enabled",ce);'
+        'h.setAttribute("data-mcp-install-cooldown-type",ct);'
+        'h.setAttribute("data-mcp-install-cooldown-days",cd);'
+        "}catch(_){}"
+        "})();</script>"
+    )
+
+
+def _tab_active_selectors(kind: str, ids: tuple[str, ...]) -> str:
+    return ",".join(
+        f'html[data-mcp-install-{kind}="{id_}"] .rp-mcp-install__tab'
+        f'[data-tab-kind="{kind}"][data-tab-value="{id_}"]'
+        for id_ in ids
+    )
+
+
+def _scope_tab_active_selectors() -> str:
+    """Generate one selector per legal (client, scope) pair.
+
+    Scope tabs are scoped to a client (``data-tab-client``) so the rule
+    only matches the visible group. The selector key is the joint pair
+    of ``data-mcp-install-client`` + ``data-mcp-install-scope`` on
+    ``<html>`` — both must match for a scope tab to light up.
+    """
+    return ",".join(
+        f'html[data-mcp-install-client="{c.id}"]'
+        f'[data-mcp-install-scope="{s.id}"]'
+        f' .rp-mcp-install__tab[data-tab-kind="scope"]'
+        f'[data-tab-client="{c.id}"][data-tab-value="{s.id}"]'
+        for c in CLIENTS
+        for s in c.scopes
+    )
+
+
+def _scope_group_visible_selectors() -> str:
+    """One rule per client that has a scope group rendered.
+
+    Single-scope clients (``len(scopes) == 1``) get no group in the
+    template, so they get no rule here either.
+    """
+    return ",".join(
+        f'html[data-mcp-install-client="{c.id}"]'
+        f' .rp-mcp-install__scopes-group[data-scope-client="{c.id}"]'
+        for c in CLIENTS
+        if len(c.scopes) > 1
+    )
+
+
+def _panel_active_selectors() -> str:
+    """One selector per legal (client, method, scope, cooldown-state).
+
+    Cooldown state is the (enabled, type) pair. There are three cases:
+
+    * ``enabled=0`` → show the panel whose ``data-cooldown="off"``,
+      regardless of saved type.
+    * ``enabled=1`` + ``type=days`` → show the panel whose
+      ``data-cooldown="days"``.
+    * ``enabled=1`` + ``type=bypass`` → show the panel whose
+      ``data-cooldown="bypass"``.
+
+    Enumerates 30 selectors per case = 90 total (same count as the
+    previous single-``mode`` model, just keyed on the new attr pair).
+    """
+    selectors: list[str] = []
+    for c in CLIENTS:
+        for m in METHODS:
+            for s in c.scopes:
+                base = (
+                    f'[data-mcp-install-client="{c.id}"]'
+                    f'[data-mcp-install-method="{m.id}"]'
+                    f'[data-mcp-install-scope="{s.id}"]'
+                )
+                panel_base = (
+                    f" .rp-mcp-install__panel"
+                    f'[data-client="{c.id}"]'
+                    f'[data-method="{m.id}"]'
+                    f'[data-scope="{s.id}"]'
+                )
+                # enabled=0 → off panel (type is don't-care)
+                selectors.append(
+                    f'html[data-mcp-install-cooldown-enabled="0"]'
+                    f"{base}{panel_base}"
+                    f'[data-cooldown="off"]'
+                )
+                # enabled=1, type=days → days panel
+                selectors.append(
+                    f'html[data-mcp-install-cooldown-enabled="1"]'
+                    f'[data-mcp-install-cooldown-type="days"]'
+                    f"{base}{panel_base}"
+                    f'[data-cooldown="days"]'
+                )
+                # enabled=1, type=bypass → bypass panel
+                selectors.append(
+                    f'html[data-mcp-install-cooldown-enabled="1"]'
+                    f'[data-mcp-install-cooldown-type="bypass"]'
+                    f"{base}{panel_base}"
+                    f'[data-cooldown="bypass"]'
+                )
+    return ",".join(selectors)
+
+
+def _build_style() -> str:
+    """Return the ``<style>`` block that drives active state from html attrs.
+
+    Selectors are enumerated from :data:`CLIENTS` / :data:`METHODS` so
+    adding a client, method, or scope auto-extends the prehydrate rules
+    — no second source of truth to drift from.
+
+    Rules are wrapped in ``@layer mcp-install-prehydrate``.
+    ``gp-furo-theme`` ships Tailwind v4's preflight inside
+    ``@layer base``, including
+    ``[hidden]:where(:not([hidden="until-found"])){display:none!important}``.
+    Per CSS Cascade Level 5, important-rule layer ordering is reversed:
+    rules in *any* cascade layer outrank ``!important`` unlayered rules
+    regardless of specificity. An unlayered prehydrate ``<style>``
+    therefore loses to the preflight on the saved panel, so the saved
+    panel paints as ``display:none`` until ``widget.js`` mutates
+    ``[hidden]`` and the install widget visibly grows. Declaring our
+    rules in their own layer makes them the *first* layer the browser
+    encounters (the prehydrate ``<style>`` lives in ``metatags``,
+    before any ``<link>``), which is the highest-priority layer for
+    ``!important``.
+
+    The reversal only applies to ``!important`` declarations. *Normal*
+    layered rules LOSE to *normal* unlayered rules — so every
+    declaration here is ``!important``, including the tab
+    active/inactive colours that competed (and won, unlayered) against
+    ``widget.css``'s ``.rp-mcp-install__tab[aria-selected="true"]``
+    purely on specificity. Drop the ``!important`` on a tab
+    declaration and the active-tab indicator will flash from server
+    default to saved state on first paint.
+
+    Cooldown adds a fourth dimension keyed on the (enabled, type)
+    pair on ``<html>`` rather than a single ``cooldown-mode`` attr.
+    The ``cooldown-days`` html attribute does NOT drive a CSS rule —
+    the days number lives in spans ``widget.js`` updates by
+    textContent on every change (both duration ``P<N>D`` and
+    absolute-date forms coexist; uvx + pip use duration, pipx uses
+    absolute).
+    """
+    client_ids = tuple(c.id for c in CLIENTS)
+    method_ids = tuple(m.id for m in METHODS)
+    rules = [
+        _TAB_DEACTIVATE_RULE,
+        _tab_active_selectors("client", client_ids) + _TAB_ACTIVE_DECL,
+        _tab_active_selectors("method", method_ids) + _TAB_ACTIVE_DECL,
+        _scope_tab_active_selectors() + _TAB_ACTIVE_DECL,
+        _scope_group_visible_selectors() + _SCOPE_GROUP_ACTIVE_DECL,
+        _PANEL_HIDE_RULE,
+        _panel_active_selectors() + _PANEL_ACTIVE_DECL,
+        _COOLDOWN_TOGGLE_RULES,
+    ]
+    return "<style>@layer mcp-install-prehydrate{" + "".join(rules) + "}</style>"
+
+
+def _snippet() -> str:
+    return _build_style() + _script()
+
+
+def inject_mcp_install_prehydrate(
+    app: Sphinx,
+    pagename: str,
+    templatename: str,
+    context: dict[str, t.Any],
+    doctree: object,
+) -> None:
+    """Inject the prehydrate ``<style>`` + ``<script>`` into Furo's ``<head>``.
+
+    Appended to ``context["metatags"]`` so it lands in Furo's
+    ``metatags`` slot (rendered before stylesheets and the ``<body>``
+    open). The pair is small (~3 KB with the cooldown rules) and a
+    no-op when no widget is present, so we don't bother scoping to
+    pages that use the directive.
+    """
+    context["metatags"] = context.get("metatags", "") + _snippet()
+
+
+def _library_install_snippet() -> str:
+    """Return the inline ``<script>`` that replays saved library method.
+
+    The CSS rules that drive panel visibility from
+    ``html[data-library-install-method=...]`` live in
+    ``docs/_widgets/library-install/widget.css`` — both stylesheet and
+    widget JS read the same storage key.
+    """
+    from .library_install import DEFAULT_METHOD
+
+    return (
+        '<script data-cfasync="false">(function(){'
+        "try{"
+        'var m=localStorage.getItem("rampa.library-install.method.v2")||"' + DEFAULT_METHOD + '";'
+        'document.documentElement.setAttribute("data-library-install-method",m);'
+        "}catch(_){}"
+        "})();</script>"
+    )
+
+
+def inject_library_install_prehydrate(
+    app: Sphinx,
+    pagename: str,
+    templatename: str,
+    context: dict[str, t.Any],
+    doctree: object,
+) -> None:
+    """Inject the library-install prehydrate snippet into Furo's ``<head>``."""
+    context["metatags"] = context.get("metatags", "") + _library_install_snippet()
+
+
+_CLI_TAB_DEACTIVATE_RULE = (
+    "html[data-cli-install-method] .rp-cli-install__tab"
+    '[data-tab-kind="method"][aria-selected="true"]'
+    "{color:var(--color-foreground-muted) !important;"
+    "border-bottom-color:transparent !important;"
+    "background:transparent !important}"
+)
+
+
+_CLI_TAB_ACTIVE_DECL = (
+    "{color:var(--color-brand-primary) !important;"
+    "border-bottom-color:var(--color-brand-primary) !important;"
+    "background:var(--color-background-primary) !important}"
+)
+
+
+_CLI_PANEL_HIDE_RULE = (
+    "html[data-cli-install-method] .rp-cli-install__panel:not([hidden]){display:none !important}"
+)
+
+
+_CLI_PANEL_ACTIVE_DECL = "{display:block !important}"
+
+
+# Cli-install checkbox styling — mirrors `_COOLDOWN_TOGGLE_RULES` for
+# mcp-install. Same `appearance: none` + ✓ pseudo pattern, keyed on
+# ``data-cli-install-cooldown-enabled="1"`` instead of the mcp attr.
+# Must paint before any JS to avoid the native unchecked → checked
+# flicker on every reload.
+_CLI_COOLDOWN_TOGGLE_RULES = (
+    ".rp-cli-install__cooldown-toggle"
+    "{appearance:none !important;"
+    "-webkit-appearance:none !important;"
+    "width:0.95em !important;"
+    "height:0.95em !important;"
+    "margin:0 !important;"
+    "border:1.5px solid var(--color-foreground-muted) !important;"
+    "border-radius:0.2em !important;"
+    "background:var(--color-background-primary) !important;"
+    "cursor:pointer !important;"
+    "position:relative !important;"
+    "flex:0 0 auto !important}"
+    'html[data-cli-install-cooldown-enabled="1"]'
+    " .rp-cli-install__cooldown-toggle"
+    "{background:var(--color-brand-primary) !important;"
+    "border-color:var(--color-brand-primary) !important}"
+    'html[data-cli-install-cooldown-enabled="1"]'
+    " .rp-cli-install__cooldown-toggle::after"
+    '{content:"✓" !important;'
+    "position:absolute !important;"
+    "inset:0 !important;"
+    "display:flex !important;"
+    "align-items:center !important;"
+    "justify-content:center !important;"
+    "color:#fff !important;"
+    "font-size:0.85em !important;"
+    "font-weight:700 !important;"
+    "line-height:1 !important}"
+    ".rp-cli-install__cooldown-toggle:focus-visible"
+    "{outline:2px solid var(--color-brand-primary) !important;"
+    "outline-offset:2px !important}"
+)
+
+
+def _cli_tab_active_selectors(method_ids: tuple[str, ...]) -> str:
+    """Return the comma-joined active-tab selectors keyed on html attrs."""
+    return ",".join(
+        f'html[data-cli-install-method="{id_}"] .rp-cli-install__tab'
+        f'[data-tab-kind="method"][data-tab-value="{id_}"]'
+        for id_ in method_ids
+    )
+
+
+def _cli_panel_active_selectors(method_ids: tuple[str, ...]) -> str:
+    """Return the 12-selector method x cooldown panel-active matrix.
+
+    Three cases per method:
+
+    * ``enabled=0`` -> show the ``data-cooldown="off"`` panel (type is
+      don't-care).
+    * ``enabled=1`` + ``type="days"`` -> show the days panel.
+    * ``enabled=1`` + ``type="bypass"`` -> show the bypass panel.
+
+    Enumerates 4 methods x 3 cases = 12 selectors.
+    """
+    selectors: list[str] = []
+    for method_id in method_ids:
+        base = f'[data-cli-install-method="{method_id}"]'
+        panel_base = f' .rp-cli-install__panel[data-method="{method_id}"]'
+        selectors.append(
+            f'html[data-cli-install-cooldown-enabled="0"]{base}{panel_base}[data-cooldown="off"]'
+        )
+        selectors.append(
+            f'html[data-cli-install-cooldown-enabled="1"]'
+            f'[data-cli-install-cooldown-type="days"]'
+            f"{base}{panel_base}"
+            f'[data-cooldown="days"]'
+        )
+        selectors.append(
+            f'html[data-cli-install-cooldown-enabled="1"]'
+            f'[data-cli-install-cooldown-type="bypass"]'
+            f"{base}{panel_base}"
+            f'[data-cooldown="bypass"]'
+        )
+    return ",".join(selectors)
+
+
+def _build_cli_install_style() -> str:
+    """Return the ``<style>`` block driving cli-install state from html attrs.
+
+    Wrapped in ``@layer cli-install-prehydrate`` — same rationale as the
+    mcp-install layer: ``gp-furo-theme``'s Tailwind preflight lives in
+    ``@layer base`` and per CSS Cascade Level 5 ``!important``
+    declarations in any layer outrank unlayered ``!important`` ones.
+    Without the layer the preflight's ``[hidden]`` rule would paint
+    every panel as ``display:none`` until ``widget.js`` ran.
+    """
+    from .cli_install import METHODS
+
+    method_ids = tuple(m.id for m in METHODS)
+    rules = [
+        _CLI_TAB_DEACTIVATE_RULE,
+        _cli_tab_active_selectors(method_ids) + _CLI_TAB_ACTIVE_DECL,
+        _CLI_PANEL_HIDE_RULE,
+        _cli_panel_active_selectors(method_ids) + _CLI_PANEL_ACTIVE_DECL,
+        _CLI_COOLDOWN_TOGGLE_RULES,
+    ]
+    return "<style>@layer cli-install-prehydrate{" + "".join(rules) + "}</style>"
+
+
+def _cli_install_script() -> str:
+    """Return the inline ``<head>`` script that mirrors localStorage onto ``<html>``.
+
+    Sets four attrs before first paint:
+    ``data-cli-install-method``, ``data-cli-install-cooldown-enabled``,
+    ``data-cli-install-cooldown-type``, ``data-cli-install-cooldown-days``.
+    """
+    from .cli_install import DEFAULT_METHOD
+
+    enabled_default = "1" if DEFAULT_COOLDOWN_ENABLED else "0"
+    return (
+        '<script data-cfasync="false">(function(){'
+        "try{"
+        "var h=document.documentElement;"
+        'var m=localStorage.getItem("rampa.cli-install.method")||"' + DEFAULT_METHOD + '";'
+        'var ce=localStorage.getItem("rampa.cli-install.cooldown.enabled")||"'
+        + enabled_default
+        + '";'
+        'var ct=localStorage.getItem("rampa.cli-install.cooldown.type")||"'
+        + DEFAULT_COOLDOWN_TYPE
+        + '";'
+        'var cd=localStorage.getItem("rampa.cli-install.cooldown.days")||"'
+        + str(DEFAULT_COOLDOWN_DAYS)
+        + '";'
+        'h.setAttribute("data-cli-install-method",m);'
+        'h.setAttribute("data-cli-install-cooldown-enabled",ce);'
+        'h.setAttribute("data-cli-install-cooldown-type",ct);'
+        'h.setAttribute("data-cli-install-cooldown-days",cd);'
+        "}catch(_){}"
+        "})();</script>"
+    )
+
+
+def _cli_install_snippet() -> str:
+    return _build_cli_install_style() + _cli_install_script()
+
+
+def inject_cli_install_prehydrate(
+    app: Sphinx,
+    pagename: str,
+    templatename: str,
+    context: dict[str, t.Any],
+    doctree: object,
+) -> None:
+    """Inject the cli-install prehydrate ``<style>`` + ``<script>`` into Furo's ``<head>``."""
+    context["metatags"] = context.get("metatags", "") + _cli_install_snippet()
