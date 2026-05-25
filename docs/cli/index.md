@@ -8,8 +8,8 @@ structured output for scripts and CI.
 ```{cli-install}
 ```
 
-::::{grid} 1 1 2 3
-:gutter: 2
+::::{grid} 1 2 2 4
+:gutter: 2 2 3 3
 
 :::{grid-item-card} rampa run
 :link: run
@@ -29,6 +29,12 @@ Validate a script without running it.
 Report environment and dependency status.
 :::
 
+:::{grid-item-card} CLI Reference
+:link: reference
+:link-type: doc
+Auto-generated reference for all commands and options.
+:::
+
 ::::
 
 ```{toctree}
@@ -37,4 +43,5 @@ Report environment and dependency status.
 run
 check
 doctor
+reference
 ```

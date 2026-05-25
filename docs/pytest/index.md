@@ -6,6 +6,17 @@ Run load tests inside your existing test suite. The plugin provides
 a marker for scenario configuration and a fixture that returns the
 run result.
 
+::::{grid} 1 1 2 2
+:gutter: 2
+
+:::{grid-item-card} API Reference
+:link: reference
+:link-type: doc
+Fixture and marker reference.
+:::
+
+::::
+
 ## Install
 
 rampa registers as a pytest plugin via the `pytest11` entry point.

@@ -8,8 +8,8 @@ tests via the Model Context Protocol.
 ```{mcp-install}
 ```
 
-::::{grid} 1 1 2 2
-:gutter: 2
+::::{grid} 1 1 3 3
+:gutter: 2 2 3 3
 
 :::{grid-item-card} Tools
 :link: tools
@@ -23,6 +23,12 @@ Start, stop, and query load test runs.
 URI templates for runs, metrics, and thresholds.
 :::
 
+:::{grid-item-card} API Reference
+:link: reference
+:link-type: doc
+Server factory, run registry, and models.
+:::
+
 ::::
 
 ```{toctree}
@@ -30,4 +36,5 @@ URI templates for runs, metrics, and thresholds.
 
 tools
 resources
+reference
 ```
