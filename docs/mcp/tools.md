@@ -5,6 +5,47 @@
 The rampa MCP server provides six tools for load test lifecycle
 management, metric retrieval, and threshold evaluation.
 
+::::{grid} 1 2 3 3
+:gutter: 2 2 3 3
+
+:::{grid-item-card} Start Run
+:link: fastmcp-tool-start-run
+:link-type: ref
+Start a new load test from a script path.
+:::
+
+:::{grid-item-card} Stop Run
+:link: fastmcp-tool-stop-run
+:link-type: ref
+Gracefully stop a running test.
+:::
+
+:::{grid-item-card} Get Status
+:link: fastmcp-tool-get-status
+:link-type: ref
+Poll whether a run is active or completed.
+:::
+
+:::{grid-item-card} List Runs
+:link: fastmcp-tool-list-runs
+:link-type: ref
+List all active and completed runs.
+:::
+
+:::{grid-item-card} Get Metrics
+:link: fastmcp-tool-get-metrics
+:link-type: ref
+Retrieve metric snapshots with percentiles.
+:::
+
+:::{grid-item-card} Get Thresholds
+:link: fastmcp-tool-get-thresholds
+:link-type: ref
+Evaluate threshold pass/fail results.
+:::
+
+::::
+
 ## Run Lifecycle
 
 ```{fastmcp-tool} start_run
