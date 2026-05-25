@@ -61,6 +61,7 @@ dev = [
   "sphinx-autodoc-argparse==0.0.1a26",
   "sphinx-autodoc-pytest-fixtures==0.0.1a26",
   "sphinx-autobuild",
+  "fastmcp>=2.0",
   # Testing
   "pytest",
   "pytest-rerunfailures",
@@ -78,6 +79,7 @@ docs = [
   "sphinx-autodoc-argparse==0.0.1a26",
   "sphinx-autodoc-pytest-fixtures==0.0.1a26",
   "sphinx-autobuild",
+  "fastmcp>=2.0",
 ]
 
 [build-system]

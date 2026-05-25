@@ -1353,6 +1353,7 @@ mcp = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "fastmcp" },
     { name = "gp-sphinx" },
     { name = "pytest" },
     { name = "pytest-rerunfailures" },
@@ -1367,6 +1368,7 @@ dev = [
     { name = "ty" },
 ]
 docs = [
+    { name = "fastmcp" },
     { name = "gp-sphinx" },
     { name = "sphinx-autobuild" },
     { name = "sphinx-autodoc-api-style" },
@@ -1385,6 +1387,7 @@ provides-extras = ["mcp"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "fastmcp", specifier = ">=2.0" },
     { name = "gp-sphinx", specifier = "==0.0.1a26" },
     { name = "pytest" },
     { name = "pytest-rerunfailures" },
@@ -1399,6 +1402,7 @@ dev = [
     { name = "ty", specifier = ">=0.0.35" },
 ]
 docs = [
+    { name = "fastmcp", specifier = ">=2.0" },
     { name = "gp-sphinx", specifier = "==0.0.1a26" },
     { name = "sphinx-autobuild" },
     { name = "sphinx-autodoc-api-style", specifier = "==0.0.1a26" },
