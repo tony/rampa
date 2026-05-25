@@ -1,65 +1,63 @@
 (mcp-tools)=
 
-# MCP Tools
+# Tools
 
 The rampa MCP server provides six tools for load test lifecycle
-management.
+management, metric retrieval, and threshold evaluation.
 
-## start_run
+## Run Lifecycle
 
-Start a new load test from a script path.
+```{fastmcp-tool} start_run
+```
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `script_path` | string | Path to the test script |
-| `vus` | int (optional) | Override VU count |
-| `duration` | string (optional) | Override duration |
-| `scenario` | string (optional) | Run a specific scenario |
+Start a new load test from a script path. Returns the `run_id` and
+initial status.
 
-Returns: `run_id`, initial status.
+```{fastmcp-tool-input} start_run
+```
 
-## stop_run
+```{fastmcp-tool} stop_run
+```
 
-Stop a running test gracefully.
+Gracefully stop a running test. Idempotent — calling on a completed
+run returns `already_completed`.
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `run_id` | string | The run to stop |
-| `reason` | string (optional) | Stop reason |
+```{fastmcp-tool-input} stop_run
+```
 
-## get_status
+```{fastmcp-tool} get_status
+```
 
-Poll the current status of a run.
+Poll whether a run is still active or has completed.
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `run_id` | string | The run to query |
+```{fastmcp-tool-input} get_status
+```
 
-Returns: status, elapsed time, iteration count.
+```{fastmcp-tool} list_runs
+```
 
-## list_runs
+List all active and completed runs with their `run_id`, `status`,
+and `script_path`.
 
-List all completed and active runs.
+## Metrics
 
-Returns: array of run summaries with `run_id`, `status`, `script_path`.
+```{fastmcp-tool} get_metrics
+```
 
-## get_metrics
+Retrieve the latest metric snapshot for a run. Without a
+`metric_name` filter, returns all metrics including timing
+percentiles, counters, and rates.
 
-Retrieve the latest metric snapshot for a run.
+```{fastmcp-tool-input} get_metrics
+```
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `run_id` | string | The run to query |
-| `metric` | string (optional) | Filter to a specific metric |
+## Thresholds
 
-Returns: metric values with aggregations.
+```{fastmcp-tool} get_thresholds
+```
 
-## get_thresholds
+Evaluate threshold results for a completed run. Returns pass/fail
+status with actual vs expected values for each threshold expression.
 
-Evaluate threshold results for a completed run.
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `run_id` | string | The run to query |
-
-Returns: threshold pass/fail results with actual vs expected values.
+```{fastmcp-tool-input} get_thresholds
+```
