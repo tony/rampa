@@ -1341,7 +1341,6 @@ version = "0.0.1a0"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
-    { name = "click" },
     { name = "pydantic" },
 ]
 
@@ -1371,7 +1370,6 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "aiohttp", specifier = ">=3.9" },
-    { name = "click", specifier = ">=8.0" },
     { name = "fastmcp", marker = "extra == 'mcp'", specifier = ">=2.0" },
     { name = "pydantic", specifier = ">=2.0" },
 ]
