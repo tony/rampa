@@ -1,0 +1,14 @@
+/* docs/_static/css/project-cards.css
+ *
+ * Scope: sphinx-design grid-item-card titles.
+ *
+ * Furo applies a 1px border to <code> chips only when they sit inside a
+ * paragraph.  Card titles are <div>s, not <p>s, so the border never
+ * lands.  Extend the same border to code chips in card titles so they
+ * match prose.
+ */
+
+.sd-card-title code.literal,
+.sd-card-title .sig-inline {
+  border: 1px solid var(--color-background-border);
+}
