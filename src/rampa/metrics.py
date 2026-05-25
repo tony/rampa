@@ -472,6 +472,8 @@ class MetricEngine:
     flush_interval : float
         Seconds between snapshot emissions.
 
+    Examples
+    --------
     >>> eng = MetricEngine(
     ...     registry=MetricRegistry(),
     ...     sample_queue=queue.SimpleQueue(),
