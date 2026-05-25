@@ -9,6 +9,17 @@ platform, and optional dependency availability.
 $ rampa doctor
 ```
 
+## Command
+
+```{eval-rst}
+.. argparse::
+   :module: rampa.cli
+   :func: build_docs_parser
+   :prog: rampa
+   :path: doctor
+   :nodescription:
+```
+
 ## Example output
 
 ```text

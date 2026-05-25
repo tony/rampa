@@ -7,10 +7,6 @@ Async Python load testing, inspired by k6.
 Write an async scenario function, run it, get request metrics with
 percentiles, checks, thresholds, and correct exit codes.
 
-```{warning}
-**Pre-alpha.** APIs may change. [Feedback welcome](https://github.com/tony/rampa/issues).
-```
-
 ```{cli-install}
 :variant: compact
 ```

@@ -8,16 +8,16 @@ Execute a load test script.
 $ rampa run load_test.py
 ```
 
-## Options
+## Command
 
-| Flag | Type | Description |
-|------|------|-------------|
-| `--vus` | int | Override VU count for all scenarios |
-| `--duration` | str | Override duration (e.g. `30s`, `1m`, `500ms`) |
-| `--scenario` | str | Run only the named scenario |
-| `--out` | path | Write JSON results to a file |
-| `--event-log` | path | Write JSONL event stream to a file |
-| `--quiet` | flag | Suppress console summary |
+```{eval-rst}
+.. argparse::
+   :module: rampa.cli
+   :func: build_docs_parser
+   :prog: rampa
+   :path: run
+   :nodescription:
+```
 
 ## Examples
 

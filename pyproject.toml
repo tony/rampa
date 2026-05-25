@@ -35,7 +35,6 @@ include = [
 
 dependencies = [
   "pydantic>=2.0",
-  "click>=8.0",
   "aiohttp>=3.9",
 ]
 
@@ -58,7 +57,11 @@ dev = [
   # Docs
   "gp-sphinx==0.0.1a26",
   "sphinx-autodoc-api-style==0.0.1a26",
+  "sphinx-autodoc-fastmcp==0.0.1a26",
+  "sphinx-autodoc-argparse==0.0.1a26",
+  "sphinx-autodoc-pytest-fixtures==0.0.1a26",
   "sphinx-autobuild",
+  "fastmcp>=2.0",
   # Testing
   "pytest",
   "pytest-rerunfailures",
@@ -72,7 +75,11 @@ dev = [
 docs = [
   "gp-sphinx==0.0.1a26",
   "sphinx-autodoc-api-style==0.0.1a26",
+  "sphinx-autodoc-fastmcp==0.0.1a26",
+  "sphinx-autodoc-argparse==0.0.1a26",
+  "sphinx-autodoc-pytest-fixtures==0.0.1a26",
   "sphinx-autobuild",
+  "fastmcp>=2.0",
 ]
 
 [build-system]
@@ -83,7 +90,9 @@ build-backend = "hatchling.build"
 gp-furo-theme = false
 gp-sphinx = false
 sphinx-autodoc-api-style = false
+sphinx-autodoc-argparse = false
 sphinx-autodoc-docutils = false
+sphinx-autodoc-fastmcp = false
 sphinx-autodoc-pytest-fixtures = false
 sphinx-autodoc-sphinx = false
 sphinx-autodoc-typehints-gp = false

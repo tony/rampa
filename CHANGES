@@ -8,6 +8,16 @@
 _Notes on the upcoming release will go here._
 <!-- END PLACEHOLDER - ADD NEW CHANGELOG ENTRIES BELOW THIS LINE -->
 
+### Documentation
+
+#### Auto-generated reference docs for CLI, MCP, and pytest
+
+CLI commands, MCP tools and resources, and pytest fixtures now have
+auto-generated reference pages with typed parameter tables and safety
+badges. The CLI was migrated from Click to argparse to enable
+`sphinx-autodoc-argparse` directives; help output now includes
+colorized example blocks. (#3)
+
 ## rampa 0.0.1a0 (2026-05-24)
 
 rampa 0.0.1 ships the complete local load-testing engine. A user can

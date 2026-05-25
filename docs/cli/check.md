@@ -9,6 +9,17 @@ validates executor configurations, and reports a summary.
 $ rampa check load_test.py
 ```
 
+## Command
+
+```{eval-rst}
+.. argparse::
+   :module: rampa.cli
+   :func: build_docs_parser
+   :prog: rampa
+   :path: check
+   :nodescription:
+```
+
 ## Example output
 
 ```text
@@ -35,4 +46,4 @@ status: valid
 |------|---------|
 | 0 | Script is valid |
 | 1 | Validation error (no scenarios, bad executor, import failure) |
-| 2 | File not found (Click path validation) |
+| 2 | File not found |

@@ -8,8 +8,8 @@ tests via the Model Context Protocol.
 ```{mcp-install}
 ```
 
-::::{grid} 1 1 2 2
-:gutter: 2
+::::{grid} 1 1 3 3
+:gutter: 2 2 3 3
 
 :::{grid-item-card} Tools
 :link: tools
@@ -23,11 +23,30 @@ Start, stop, and query load test runs.
 URI templates for runs, metrics, and thresholds.
 :::
 
+:::{grid-item-card} API Reference
+:link: reference
+:link-type: doc
+Server factory, run registry, and models.
+:::
+
 ::::
+
+## What you can do
+
+### Load Testing
+
+Start and manage load test runs from AI agents.
+{ref}`fastmcp-tool-start-run` · {ref}`fastmcp-tool-stop-run` · {ref}`fastmcp-tool-get-status` · {ref}`fastmcp-tool-list-runs`
+
+### Observability
+
+Query metrics and threshold results for completed runs.
+{ref}`fastmcp-tool-get-metrics` · {ref}`fastmcp-tool-get-thresholds`
 
 ```{toctree}
 :hidden:
 
 tools
 resources
+reference
 ```

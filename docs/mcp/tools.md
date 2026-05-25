@@ -1,65 +1,104 @@
 (mcp-tools)=
 
-# MCP Tools
+# Tools
 
 The rampa MCP server provides six tools for load test lifecycle
-management.
+management, metric retrieval, and threshold evaluation.
 
-## start_run
+::::{grid} 1 2 3 3
+:gutter: 2 2 3 3
 
+:::{grid-item-card} Start Run
+:link: fastmcp-tool-start-run
+:link-type: ref
 Start a new load test from a script path.
+:::
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `script_path` | string | Path to the test script |
-| `vus` | int (optional) | Override VU count |
-| `duration` | string (optional) | Override duration |
-| `scenario` | string (optional) | Run a specific scenario |
+:::{grid-item-card} Stop Run
+:link: fastmcp-tool-stop-run
+:link-type: ref
+Gracefully stop a running test.
+:::
 
-Returns: `run_id`, initial status.
+:::{grid-item-card} Get Status
+:link: fastmcp-tool-get-status
+:link-type: ref
+Poll whether a run is active or completed.
+:::
 
-## stop_run
+:::{grid-item-card} List Runs
+:link: fastmcp-tool-list-runs
+:link-type: ref
+List all active and completed runs.
+:::
 
-Stop a running test gracefully.
+:::{grid-item-card} Get Metrics
+:link: fastmcp-tool-get-metrics
+:link-type: ref
+Retrieve metric snapshots with percentiles.
+:::
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `run_id` | string | The run to stop |
-| `reason` | string (optional) | Stop reason |
+:::{grid-item-card} Get Thresholds
+:link: fastmcp-tool-get-thresholds
+:link-type: ref
+Evaluate threshold pass/fail results.
+:::
 
-## get_status
+::::
 
-Poll the current status of a run.
+## Run Lifecycle
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `run_id` | string | The run to query |
+```{fastmcp-tool} start_run
+```
 
-Returns: status, elapsed time, iteration count.
+Start a new load test from a script path. Returns the `run_id` and
+initial status.
 
-## list_runs
+```{fastmcp-tool-input} start_run
+```
 
-List all completed and active runs.
+```{fastmcp-tool} stop_run
+```
 
-Returns: array of run summaries with `run_id`, `status`, `script_path`.
+Gracefully stop a running test. Idempotent — calling on a completed
+run returns `already_completed`.
 
-## get_metrics
+```{fastmcp-tool-input} stop_run
+```
 
-Retrieve the latest metric snapshot for a run.
+```{fastmcp-tool} get_status
+```
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `run_id` | string | The run to query |
-| `metric` | string (optional) | Filter to a specific metric |
+Poll whether a run is still active or has completed.
 
-Returns: metric values with aggregations.
+```{fastmcp-tool-input} get_status
+```
 
-## get_thresholds
+```{fastmcp-tool} list_runs
+```
 
-Evaluate threshold results for a completed run.
+List all active and completed runs with their `run_id`, `status`,
+and `script_path`.
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `run_id` | string | The run to query |
+## Metrics
 
-Returns: threshold pass/fail results with actual vs expected values.
+```{fastmcp-tool} get_metrics
+```
+
+Retrieve the latest metric snapshot for a run. Without a
+`metric_name` filter, returns all metrics including timing
+percentiles, counters, and rates.
+
+```{fastmcp-tool-input} get_metrics
+```
+
+## Thresholds
+
+```{fastmcp-tool} get_thresholds
+```
+
+Evaluate threshold results for a completed run. Returns pass/fail
+status with actual vs expected values for each threshold expression.
+
+```{fastmcp-tool-input} get_thresholds
+```
