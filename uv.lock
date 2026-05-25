@@ -1362,6 +1362,7 @@ dev = [
     { name = "sphinx-autodoc-api-style" },
     { name = "sphinx-autodoc-argparse" },
     { name = "sphinx-autodoc-fastmcp" },
+    { name = "sphinx-autodoc-pytest-fixtures" },
     { name = "tomlkit" },
     { name = "ty" },
 ]
@@ -1371,6 +1372,7 @@ docs = [
     { name = "sphinx-autodoc-api-style" },
     { name = "sphinx-autodoc-argparse" },
     { name = "sphinx-autodoc-fastmcp" },
+    { name = "sphinx-autodoc-pytest-fixtures" },
 ]
 
 [package.metadata]
@@ -1392,6 +1394,7 @@ dev = [
     { name = "sphinx-autodoc-api-style", specifier = "==0.0.1a26" },
     { name = "sphinx-autodoc-argparse", specifier = "==0.0.1a26" },
     { name = "sphinx-autodoc-fastmcp", specifier = "==0.0.1a26" },
+    { name = "sphinx-autodoc-pytest-fixtures", specifier = "==0.0.1a26" },
     { name = "tomlkit", specifier = ">=0.13" },
     { name = "ty", specifier = ">=0.0.35" },
 ]
@@ -1401,6 +1404,7 @@ docs = [
     { name = "sphinx-autodoc-api-style", specifier = "==0.0.1a26" },
     { name = "sphinx-autodoc-argparse", specifier = "==0.0.1a26" },
     { name = "sphinx-autodoc-fastmcp", specifier = "==0.0.1a26" },
+    { name = "sphinx-autodoc-pytest-fixtures", specifier = "==0.0.1a26" },
 ]
 
 [[package]]
@@ -1657,6 +1661,22 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/53/b7/1f42ce8c0cc416e4a98ae29aad8b3b0113776e1892794bcb4e1fa579eb10/sphinx_autodoc_fastmcp-0.0.1a26.tar.gz", hash = "sha256:2be0b723069b7a051706aca01a5e54e7d633aa7b1b73ad4c827eb6f847903d60", size = 26118, upload-time = "2026-05-25T12:52:52.409Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/fd/c2/c9b7714c085cb165f870b052db761332f75e1be7d99422f89ab73fd6d75f/sphinx_autodoc_fastmcp-0.0.1a26-py3-none-any.whl", hash = "sha256:c6d7cf530c03fe3902028db217a906afe5a2c2a4848d4ca2112db1dc7e805a33", size = 29809, upload-time = "2026-05-25T12:52:31.31Z" },
+]
+
+[[package]]
+name = "sphinx-autodoc-pytest-fixtures"
+version = "0.0.1a26"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pytest" },
+    { name = "sphinx" },
+    { name = "sphinx-autodoc-typehints-gp" },
+    { name = "sphinx-ux-autodoc-layout" },
+    { name = "sphinx-ux-badges" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d7/40/bb80a0c83015cd26919124726a6fb0c9c2e9e27230e67b20c6f71f0b750e/sphinx_autodoc_pytest_fixtures-0.0.1a26.tar.gz", hash = "sha256:740848e87d4db0fb2ce293f67edcd27f7fed8aba5bad4beb1966be06e1ff0d4e", size = 32709, upload-time = "2026-05-25T12:52:53.312Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/da/52/95296e0a97446d901f852a506aba7d6253028d9a82a141a1bad6889659e4/sphinx_autodoc_pytest_fixtures-0.0.1a26-py3-none-any.whl", hash = "sha256:5c3c25acfaf95a876dc55dc55c06beaa030a87037a6ce1c983f0a671c0db8e50", size = 39229, upload-time = "2026-05-25T12:52:32.581Z" },
 ]
 
 [[package]]

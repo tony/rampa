@@ -30,6 +30,7 @@ conf = merge_sphinx_config(
         "sphinx_autodoc_api_style",
         "sphinx_autodoc_fastmcp",
         "sphinx_autodoc_argparse.exemplar",
+        "sphinx_autodoc_pytest_fixtures",
         "docs._ext.widgets",
     ],
     intersphinx_mapping={

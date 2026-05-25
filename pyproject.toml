@@ -59,6 +59,7 @@ dev = [
   "sphinx-autodoc-api-style==0.0.1a26",
   "sphinx-autodoc-fastmcp==0.0.1a26",
   "sphinx-autodoc-argparse==0.0.1a26",
+  "sphinx-autodoc-pytest-fixtures==0.0.1a26",
   "sphinx-autobuild",
   # Testing
   "pytest",
@@ -75,6 +76,7 @@ docs = [
   "sphinx-autodoc-api-style==0.0.1a26",
   "sphinx-autodoc-fastmcp==0.0.1a26",
   "sphinx-autodoc-argparse==0.0.1a26",
+  "sphinx-autodoc-pytest-fixtures==0.0.1a26",
   "sphinx-autobuild",
 ]
 
