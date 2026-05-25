@@ -1,6 +1,6 @@
 [project]
 name = "rampa"
-version = "0.0.0"
+version = "0.0.1a0"
 description = "Load testing framework"
 requires-python = ">=3.14,<4.0"
 authors = [
