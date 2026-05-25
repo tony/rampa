@@ -23,6 +23,7 @@ classifiers = [
 ]
 
 keywords = ["load-test", "benchmark", "http", "testing"]
+readme = "README.md"
 packages = [
   { include = "*", from = "src" },
 ]
