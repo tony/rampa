@@ -12,3 +12,11 @@ Auto-generated reference for all `rampa` commands.
    :func: build_docs_parser
    :prog: rampa
 ```
+
+## Entry Points
+
+```{eval-rst}
+.. autofunction:: rampa.cli.create_parser
+.. autofunction:: rampa.cli.build_docs_parser
+.. autofunction:: rampa.cli.main
+```

@@ -31,6 +31,18 @@ Server factory, run registry, and models.
 
 ::::
 
+## What you can do
+
+### Load Testing
+
+Start and manage load test runs from AI agents.
+{ref}`fastmcp-tool-start-run` · {ref}`fastmcp-tool-stop-run` · {ref}`fastmcp-tool-get-status` · {ref}`fastmcp-tool-list-runs`
+
+### Observability
+
+Query metrics and threshold results for completed runs.
+{ref}`fastmcp-tool-get-metrics` · {ref}`fastmcp-tool-get-thresholds`
+
 ```{toctree}
 :hidden:
 

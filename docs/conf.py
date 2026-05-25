@@ -49,6 +49,14 @@ conf["fastmcp_collector_mode"] = "introspect"
 conf["fastmcp_area_map"] = {"rampa_fastmcp": "mcp/tools"}
 conf["fastmcp_server_module"] = "rampa.mcp.server:build_mcp_server"
 
+# Safety badges on tool sections
+conf["fastmcp_section_badge_map"] = {
+    "Run Lifecycle": "mutating",
+    "Metrics": "readonly",
+    "Thresholds": "readonly",
+}
+conf["fastmcp_section_badge_pages"] = ("mcp/tools", "mcp/index", "index")
+
 # Argparse exemplar
 conf["argparse_examples_code_language"] = "console"
 conf["argparse_reorder_usage_before_examples"] = True
