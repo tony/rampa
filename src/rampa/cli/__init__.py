@@ -57,7 +57,7 @@ def create_parser() -> argparse.ArgumentParser:
     >>> parser.prog
     'rampa'
     """
-    from importlib.metadata import version
+    import importlib.metadata
 
     parser = argparse.ArgumentParser(
         prog="rampa",
@@ -68,7 +68,7 @@ def create_parser() -> argparse.ArgumentParser:
         "--version",
         "-V",
         action="version",
-        version=f"%(prog)s {version('rampa')}",
+        version=f"%(prog)s {importlib.metadata.version('rampa')}",
     )
 
     subparsers = parser.add_subparsers(dest="command")

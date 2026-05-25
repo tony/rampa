@@ -47,10 +47,10 @@ def command_doctor(args: argparse.Namespace) -> None:
     args : argparse.Namespace
         Parsed arguments (no specific args for doctor).
     """
-    from importlib.metadata import version
+    import importlib.metadata
 
     print(f"python: {platform.python_version()}")
-    print(f"rampa: {version('rampa')}")
+    print(f"rampa: {importlib.metadata.version('rampa')}")
     print(f"platform: {platform.system().lower()} ({platform.machine()})")
 
     import aiohttp
