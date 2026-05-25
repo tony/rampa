@@ -2,9 +2,7 @@
 
 # pytest Plugin
 
-Run load tests inside your existing test suite. The plugin provides
-a marker for scenario configuration and a fixture that returns the
-run result.
+Run load tests inside your existing test suite.
 
 ::::{grid} 1 1 2 2
 :gutter: 2
@@ -12,7 +10,7 @@ run result.
 :::{grid-item-card} API Reference
 :link: reference
 :link-type: doc
-Fixture and marker reference.
+Function and class reference.
 :::
 
 ::::
@@ -22,11 +20,22 @@ Fixture and marker reference.
 rampa registers as a pytest plugin via the `pytest11` entry point.
 No configuration needed — install rampa and the plugin activates.
 
-## Usage
+## Fixtures
+
+```{eval-rst}
+.. autofixture:: rampa.pytest_plugin.rampa_result
+```
+
+## Quick start
 
 ```python
 import pytest
 from rampa.events import RunResult, RunStatus
+from rampa.worker import Worker
+
+
+async def my_worker(w: Worker) -> None:
+    await w.http.get("https://httpbin.org/get")
 
 
 @pytest.mark.rampa_scenario(
@@ -51,19 +60,6 @@ The marker accepts the same keyword arguments as
 
 All `ScenarioConfig` fields work: `executor`, `vus`, `duration`,
 `iterations`, `stages`, `rate`, `max_vus`.
-
-## Fixture: `rampa_result`
-
-The `rampa_result` fixture runs the scenario and returns a
-{class}`~rampa.events.RunResult`. The fixture does not auto-fail on
-threshold breach — assert on `result.status` in the test body.
-
-```python
-def test_thresholds(rampa_result: RunResult) -> None:
-    assert rampa_result.status == RunStatus.PASSED
-    assert len(rampa_result.threshold_results) > 0
-    assert all(r.passed for r in rampa_result.threshold_results)
-```
 
 ## Complete example
 
