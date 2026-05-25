@@ -27,6 +27,7 @@ conf = merge_sphinx_config(
     source_branch="main",
     extra_extensions=[
         "sphinx_autodoc_api_style",
+        "docs._ext.widgets",
     ],
     intersphinx_mapping={
         "python": ("https://docs.python.org/3/", None),

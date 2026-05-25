@@ -5,42 +5,7 @@
 The `rampa-mcp` server lets AI agents start, stop, and query load
 tests via the Model Context Protocol.
 
-## Install
-
-::::{tab-set}
-
-:::{tab-item} uv
-```console
-$ uv add "rampa[mcp]"
-```
-:::
-
-:::{tab-item} pip
-```console
-$ pip install "rampa[mcp]"
-```
-:::
-
-::::
-
-## Start the server
-
-```console
-$ rampa-mcp
-```
-
-## Client configuration
-
-### Claude Code
-
-```console
-$ claude mcp add rampa-mcp -- rampa-mcp
-```
-
-### Codex
-
-```console
-$ codex install rampa-mcp
+```{mcp-install}
 ```
 
 ::::{grid} 1 1 2 2

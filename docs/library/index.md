@@ -5,6 +5,9 @@
 Use rampa as a Python library to build, configure, and run load tests
 programmatically.
 
+```{library-install}
+```
+
 ::::{grid} 1 1 2 2
 :gutter: 2
 

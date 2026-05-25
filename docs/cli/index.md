@@ -5,6 +5,9 @@
 The `rampa` CLI runs load tests from the terminal and produces
 structured output for scripts and CI.
 
+```{cli-install}
+```
+
 ::::{grid} 1 1 2 3
 :gutter: 2
 

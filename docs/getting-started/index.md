@@ -6,21 +6,8 @@ Write and run your first load test in 60 seconds.
 
 ## Install
 
-::::{tab-set}
-
-:::{tab-item} uv
-```console
-$ uv add rampa
+```{library-install}
 ```
-:::
-
-:::{tab-item} pip
-```console
-$ pip install rampa
-```
-:::
-
-::::
 
 Verify:
 
@@ -83,9 +70,3 @@ $ rampa run load_test.py --event-log events.jsonl
 - {doc}`../library/executors` — choosing the right executor
 - {doc}`../library/metrics` — built-in and custom metrics
 - {doc}`../pytest/index` — load tests in your test suite
-
-```{toctree}
-:hidden:
-
-installation
-```

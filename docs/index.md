@@ -11,23 +11,13 @@ percentiles, checks, thresholds, and correct exit codes.
 **Pre-alpha.** APIs may change. [Feedback welcome](https://github.com/tony/rampa/issues).
 ```
 
-## Install
-
-::::{tab-set}
-
-:::{tab-item} uv
-```console
-$ uv add rampa
+```{cli-install}
+:variant: compact
 ```
-:::
 
-:::{tab-item} pip
-```console
-$ pip install rampa
+```{mcp-install}
+:variant: compact
 ```
-:::
-
-::::
 
 ## Your first load test
 

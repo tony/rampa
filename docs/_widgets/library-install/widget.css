@@ -1,0 +1,109 @@
+/* Library install widget — visual rhythm matches mcp-install / cli-install.
+ *
+ * Re-uses the Furo color variables so dark/light mode follows the
+ * theme. CSS-driven visibility on the html[data-library-install-method]
+ * attribute survives gp-sphinx SPA navigation between docs pages.
+ *
+ * Code blocks (``.highlight-console``, ``.highlight-python``) inherit
+ * Pygments + Furo styling directly — no per-widget code styling here,
+ * just spacing.
+ */
+
+.rp-library-install {
+  border: 1px solid var(--color-background-border, var(--color-foreground-border, #ccc));
+  border-radius: 0.25rem;
+  background: var(--color-background-primary);
+  overflow: hidden;
+  margin: 1rem 0;
+  font-size: 0.95em;
+}
+
+.rp-library-install__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  background: var(--color-background-secondary);
+  border-bottom: 1px solid var(--color-background-border, var(--color-foreground-border, #ccc));
+}
+
+.rp-library-install__tab {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--color-foreground-muted);
+  cursor: pointer;
+  font: inherit;
+  padding: 0.45rem 0.9rem;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.rp-library-install__tab:hover {
+  color: var(--color-foreground-primary);
+  background: var(--color-background-hover, rgba(0, 0, 0, 0.04));
+}
+
+.rp-library-install__tab:focus-visible {
+  outline: 2px solid var(--color-brand-primary);
+  outline-offset: -2px;
+}
+
+.rp-library-install__tab[aria-selected="true"] {
+  color: var(--color-brand-primary);
+  border-bottom-color: var(--color-brand-primary);
+  background: var(--color-background-primary);
+}
+
+.rp-library-install__body {
+  padding: 0.9rem 1rem;
+}
+
+.rp-library-install__panel[hidden] {
+  display: none !important;
+}
+
+.rp-library-install__panel:focus-visible {
+  outline: 2px solid var(--color-brand-primary);
+  outline-offset: 4px;
+  border-radius: 0.25rem;
+}
+
+.rp-library-install__preamble {
+  margin: 0 0 0.4rem 0;
+  color: var(--color-foreground-secondary);
+  font-size: 0.93em;
+}
+
+.rp-library-install__preamble a {
+  color: var(--color-brand-content, var(--color-brand-primary));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Add a small gap when a preamble follows a code block (the "Then
+ * drive the library..." line after the install snippet). */
+.rp-library-install__panel .highlight-console + .rp-library-install__preamble {
+  margin-top: 0.8rem;
+}
+
+/* Prehydrate-driven panel visibility — keeps initial paint in sync
+ * with the saved method without waiting for widget.js to mutate
+ * [hidden]. */
+html[data-library-install-method="uv-script"]
+  .rp-library-install__panel:not([data-method="uv-script"]),
+html[data-library-install-method="uv-add"]
+  .rp-library-install__panel:not([data-method="uv-add"]),
+html[data-library-install-method="pip"]
+  .rp-library-install__panel:not([data-method="pip"]) {
+  display: none !important;
+}
+
+html[data-library-install-method="uv-script"]
+  .rp-library-install__panel[data-method="uv-script"],
+html[data-library-install-method="uv-add"]
+  .rp-library-install__panel[data-method="uv-add"],
+html[data-library-install-method="pip"]
+  .rp-library-install__panel[data-method="pip"] {
+  display: block !important;
+}
