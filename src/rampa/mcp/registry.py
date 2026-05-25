@@ -120,6 +120,8 @@ class RunRegistry:
         result : RunResult
             The final run result.
 
+        Examples
+        --------
         >>> reg = RunRegistry()
         >>> rec = RunRecord(run_id="r1", script_path="t.py", started_at=0.0)
         >>> reg.register(rec)
