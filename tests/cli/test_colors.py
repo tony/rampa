@@ -26,6 +26,7 @@ class ColorModeFixture(t.NamedTuple):
     mode: ColorMode
     env_no_color: str | None
     env_force_color: str | None
+    env_python_colors: str | None
     expected_enabled: bool
 
 
@@ -35,6 +36,7 @@ _COLOR_MODE_FIXTURES: list[ColorModeFixture] = [
         mode=ColorMode.NEVER,
         env_no_color=None,
         env_force_color=None,
+        env_python_colors=None,
         expected_enabled=False,
     ),
     ColorModeFixture(
@@ -42,6 +44,7 @@ _COLOR_MODE_FIXTURES: list[ColorModeFixture] = [
         mode=ColorMode.ALWAYS,
         env_no_color=None,
         env_force_color=None,
+        env_python_colors=None,
         expected_enabled=True,
     ),
     ColorModeFixture(
@@ -49,6 +52,7 @@ _COLOR_MODE_FIXTURES: list[ColorModeFixture] = [
         mode=ColorMode.ALWAYS,
         env_no_color="1",
         env_force_color=None,
+        env_python_colors=None,
         expected_enabled=False,
     ),
     ColorModeFixture(
@@ -56,6 +60,7 @@ _COLOR_MODE_FIXTURES: list[ColorModeFixture] = [
         mode=ColorMode.AUTO,
         env_no_color=None,
         env_force_color="1",
+        env_python_colors=None,
         expected_enabled=True,
     ),
     ColorModeFixture(
@@ -63,6 +68,39 @@ _COLOR_MODE_FIXTURES: list[ColorModeFixture] = [
         mode=ColorMode.AUTO,
         env_no_color="1",
         env_force_color="1",
+        env_python_colors=None,
+        expected_enabled=False,
+    ),
+    ColorModeFixture(
+        test_id="python-colors-0-disables",
+        mode=ColorMode.AUTO,
+        env_no_color=None,
+        env_force_color=None,
+        env_python_colors="0",
+        expected_enabled=False,
+    ),
+    ColorModeFixture(
+        test_id="python-colors-1-enables",
+        mode=ColorMode.AUTO,
+        env_no_color=None,
+        env_force_color=None,
+        env_python_colors="1",
+        expected_enabled=True,
+    ),
+    ColorModeFixture(
+        test_id="no-color-beats-python-colors",
+        mode=ColorMode.AUTO,
+        env_no_color="1",
+        env_force_color=None,
+        env_python_colors="1",
+        expected_enabled=False,
+    ),
+    ColorModeFixture(
+        test_id="python-colors-0-overrides-always",
+        mode=ColorMode.ALWAYS,
+        env_no_color=None,
+        env_force_color=None,
+        env_python_colors="0",
         expected_enabled=False,
     ),
 ]
@@ -78,16 +116,20 @@ def test_color_mode_resolution(
     mode: ColorMode,
     env_no_color: str | None,
     env_force_color: str | None,
+    env_python_colors: str | None,
     expected_enabled: bool,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Color mode respects env vars and explicit modes."""
     monkeypatch.delenv("NO_COLOR", raising=False)
     monkeypatch.delenv("FORCE_COLOR", raising=False)
+    monkeypatch.delenv("PYTHON_COLORS", raising=False)
     if env_no_color is not None:
         monkeypatch.setenv("NO_COLOR", env_no_color)
     if env_force_color is not None:
         monkeypatch.setenv("FORCE_COLOR", env_force_color)
+    if env_python_colors is not None:
+        monkeypatch.setenv("PYTHON_COLORS", env_python_colors)
 
     colors = Colors(mode)
     assert colors._enabled is expected_enabled

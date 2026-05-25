@@ -33,7 +33,9 @@ class ColorMode(enum.Enum):
 class Colors:
     r"""Semantic color utilities for CLI output.
 
-    Respects ``NO_COLOR``, ``FORCE_COLOR``, ``PYTHON_COLORS``, and TTY.
+    Resolution order: ``NO_COLOR`` (disable) → mode NEVER (disable) →
+    ``PYTHON_COLORS`` (0=disable, 1=enable) → mode ALWAYS (enable) →
+    ``FORCE_COLOR`` (enable) → TTY detection.
 
     Parameters
     ----------
@@ -77,6 +79,11 @@ class Colors:
             return False
         if self.mode == ColorMode.NEVER:
             return False
+        python_colors = os.environ.get("PYTHON_COLORS")
+        if python_colors == "0":
+            return False
+        if python_colors == "1":
+            return True
         if self.mode == ColorMode.ALWAYS:
             return True
         if os.environ.get("FORCE_COLOR"):
