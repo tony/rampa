@@ -21,8 +21,6 @@ OPTIONS_EXPECTING_VALUE = frozenset(
         "--scenario",
         "--out",
         "--event-log",
-        "--log-level",
-        "--color",
     }
 )
 
