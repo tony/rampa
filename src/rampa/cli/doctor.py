@@ -46,6 +46,12 @@ def command_doctor(args: argparse.Namespace) -> None:
     ----------
     args : argparse.Namespace
         Parsed arguments (no specific args for doctor).
+
+    Examples
+    --------
+    >>> from rampa.cli.doctor import command_doctor
+    >>> command_doctor.__name__
+    'command_doctor'
     """
     import importlib.metadata
 

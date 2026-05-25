@@ -91,6 +91,12 @@ def command_run(args: argparse.Namespace) -> None:
     args : argparse.Namespace
         Parsed arguments with script, vus, duration, scenario, json_output,
         event_log, quiet.
+
+    Examples
+    --------
+    >>> from rampa.cli.run import command_run
+    >>> command_run.__name__
+    'command_run'
     """
     from rampa.loader import load_test
 

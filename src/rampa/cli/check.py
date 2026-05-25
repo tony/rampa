@@ -47,6 +47,12 @@ def command_check(args: argparse.Namespace) -> None:
     ----------
     args : argparse.Namespace
         Parsed arguments with script.
+
+    Examples
+    --------
+    >>> from rampa.cli.check import command_check
+    >>> command_check.__name__
+    'command_check'
     """
     from rampa.loader import load_test
 
