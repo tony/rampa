@@ -1,9 +1,10 @@
-"""Docs-only FastMCP registration shim for rampa tools.
+"""Docs-only FastMCP tool signatures for sphinx-autodoc-fastmcp.
 
-The runtime server registers its tools inside ``build_mcp_server()`` so the
-live FastMCP instance stays self-contained. The Sphinx FastMCP tool collector
-documents module-level ``register(server)`` hooks, so this module mirrors the
-public tool signatures without changing runtime behavior.
+The runtime server registers tools inside ``build_mcp_server()``. This
+module provides standalone async functions with ``__fastmcp__`` namespace
+attributes so the Sphinx collector (in ``introspect`` mode) can discover
+and document each tool's typed parameters and tags without importing the
+live server.
 """
 
 from __future__ import annotations
