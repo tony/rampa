@@ -246,6 +246,13 @@ class Engine:
         )
         metric_engine.start()
 
+        from rampa.thresholds import parse_submetric
+
+        for metric_name in self._plan.config.thresholds:
+            _base, tag_filter = parse_submetric(metric_name)
+            if tag_filter:
+                registry.get_or_create_sub_sink(_base, tag_filter)
+
         abort_event = asyncio.Event()
         pause_controller = PauseController()
 
@@ -381,6 +388,7 @@ class Engine:
                     metric_thresholds,
                     registry.all_sinks(),
                     snapshot.duration,
+                    sub_sinks=registry.all_sub_sinks(),
                 )
 
                 if threshold_results:

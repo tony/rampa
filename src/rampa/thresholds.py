@@ -229,17 +229,22 @@ def evaluate_thresholds(
     metric_thresholds: dict[str, list[Threshold]],
     sinks: dict[str, Sink],
     duration: float,
+    sub_sinks: dict[tuple[str, frozenset[tuple[str, str]]], Sink] | None = None,
 ) -> list[ThresholdResult]:
     """Evaluate all thresholds against their metric sinks.
 
     Parameters
     ----------
     metric_thresholds : dict[str, list[Threshold]]
-        Metric name → list of thresholds for that metric.
+        Metric name → list of thresholds for that metric.  Names may
+        include a tag filter suffix like ``"dur{status:200}"``.
     sinks : dict[str, Sink]
-        Metric name → sink mapping.
+        Base metric name → sink mapping.
     duration : float
         Elapsed test duration in seconds.
+    sub_sinks : dict[..., Sink] | None
+        Optional submetric (base_name, frozenset tags) → sink mapping
+        for tag-filtered threshold evaluation.
 
     Returns
     -------
@@ -259,8 +264,15 @@ def evaluate_thresholds(
     """
     results: list[ThresholdResult] = []
     for metric_name, thresholds in metric_thresholds.items():
-        base_name, _tag_filter = parse_submetric(metric_name)
-        sink = sinks.get(base_name)
+        base_name, tag_filter = parse_submetric(metric_name)
+
+        sink: Sink | None = None
+        if tag_filter and sub_sinks is not None:
+            key = (base_name, frozenset(tag_filter.items()))
+            sink = sub_sinks.get(key)
+        else:
+            sink = sinks.get(base_name)
+
         if sink is None:
             results.extend(
                 ThresholdResult(

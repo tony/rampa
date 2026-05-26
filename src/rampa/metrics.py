@@ -324,6 +324,14 @@ def create_sink(metric_type: MetricType) -> Sink:
             return TrendSink()
 
 
+SubmetricKey = tuple[str, frozenset[tuple[str, str]]]
+"""Identifies a tag-filtered view of a base metric.
+
+The first element is the base metric name, the second is a frozen
+set of (tag_key, tag_value) pairs used for matching.
+"""
+
+
 class MetricRegistry:
     """Thread-safe registry that enforces name-type consistency.
 
@@ -337,6 +345,7 @@ class MetricRegistry:
     def __init__(self) -> None:
         self._metrics: dict[str, Metric] = {}
         self._sinks: dict[str, Sink] = {}
+        self._sub_sinks: dict[SubmetricKey, Sink] = {}
         self._lock = threading.Lock()
 
     def get_or_create(
@@ -396,9 +405,52 @@ class MetricRegistry:
             return dict(self._metrics)
 
     def all_sinks(self) -> dict[str, Sink]:
-        """Return a snapshot of all sinks."""
+        """Return a snapshot of all base sinks."""
         with self._lock:
             return dict(self._sinks)
+
+    def get_or_create_sub_sink(
+        self,
+        base_name: str,
+        tag_filter: dict[str, str],
+    ) -> Sink | None:
+        """Get or create a sub-sink for tag-filtered threshold evaluation.
+
+        Parameters
+        ----------
+        base_name : str
+            Base metric name.
+        tag_filter : dict[str, str]
+            Tags that samples must match to feed this sub-sink.
+
+        Returns
+        -------
+        Sink | None
+            The sub-sink, or None if the base metric is not registered.
+
+        >>> reg = MetricRegistry()
+        >>> _ = reg.get_or_create("dur", MetricType.TREND)
+        >>> sink = reg.get_or_create_sub_sink("dur", {"status": "200"})
+        >>> type(sink).__name__
+        'TrendSink'
+        """
+        with self._lock:
+            metric = self._metrics.get(base_name)
+            if metric is None:
+                return None
+            key: SubmetricKey = (base_name, frozenset(tag_filter.items()))
+            if key not in self._sub_sinks:
+                self._sub_sinks[key] = create_sink(metric.metric_type)
+            return self._sub_sinks[key]
+
+    def get_sub_sink(self, key: SubmetricKey) -> Sink | None:
+        """Return a sub-sink by key, or None if not registered."""
+        return self._sub_sinks.get(key)
+
+    def all_sub_sinks(self) -> dict[SubmetricKey, Sink]:
+        """Return a snapshot of all sub-sinks."""
+        with self._lock:
+            return dict(self._sub_sinks)
 
 
 @dataclass(frozen=True)
@@ -584,6 +636,13 @@ class MetricEngine:
             sink = self.registry.get_sink(sample.metric)
         if sink is not None:
             sink.add(sample.value)
+
+        for key, sub_sink in self.registry.all_sub_sinks().items():
+            base_name, tag_set = key
+            if base_name != sample.metric:
+                continue
+            if all(sample.tags.get(k) == v for k, v in tag_set):
+                sub_sink.add(sample.value)
 
     def _emit_snapshot(self) -> None:
         elapsed = time.monotonic() - self._start_time

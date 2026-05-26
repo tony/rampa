@@ -197,3 +197,39 @@ def test_evaluate_thresholds_missing_sink() -> None:
     results = evaluate_thresholds(mt, {}, 1.0)
     assert len(results) == 1
     assert results[0].passed is True
+
+
+def test_evaluate_thresholds_with_submetric() -> None:
+    """evaluate_thresholds() uses sub-sinks for tag-filtered thresholds."""
+    from rampa.metrics import TrendSink
+
+    base_sink = TrendSink()
+    for v in [10.0, 20.0, 300.0]:
+        base_sink.add(v)
+
+    filtered_sink = TrendSink()
+    for v in [10.0, 20.0]:
+        filtered_sink.add(v)
+
+    mt = {
+        "dur{status:200}": [
+            Threshold(
+                source="avg<50",
+                expression=parse_threshold("avg<50"),
+            ),
+        ],
+    }
+
+    sub_sinks = {
+        ("dur", frozenset({("status", "200")})): filtered_sink,
+    }
+
+    results = evaluate_thresholds(
+        mt,
+        {"dur": base_sink},
+        1.0,
+        sub_sinks=sub_sinks,
+    )
+    assert len(results) == 1
+    assert results[0].passed is True
+    assert results[0].lhs == 15.0
