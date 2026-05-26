@@ -89,6 +89,12 @@ def create_run_subparser(parser: argparse.ArgumentParser) -> None:
         dest="extra_outputs",
         help="output backend (e.g. csv=results.csv, influxdb=http://...)",
     )
+    parser.add_argument(
+        "--tui",
+        action="store_true",
+        default=False,
+        help="launch interactive TUI dashboard (requires rampa[tui])",
+    )
 
 
 def command_run(args: argparse.Namespace) -> None:
@@ -130,6 +136,15 @@ def command_run(args: argparse.Namespace) -> None:
             print(f"Error: scenario {args.scenario!r} not found", file=sys.stderr)
             sys.exit(ExitCode.INVALID_CONFIG)
         plan.scenarios = {args.scenario: plan.scenarios[args.scenario]}
+
+    if getattr(args, "tui", False):
+        try:
+            from rampa.tui.app import run_tui
+
+            sys.exit(run_tui(plan))
+        except RuntimeError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(ExitCode.INVALID_CONFIG)
 
     from rampa.output import Output
     from rampa.outputs import get_output
