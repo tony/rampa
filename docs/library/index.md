@@ -35,6 +35,12 @@ Built-in metrics, custom metrics, and the metric pipeline.
 Expression syntax and pass/fail evaluation.
 :::
 
+:::{grid-item-card} Outputs
+:link: outputs
+:link-type: doc
+Send results to CSV, InfluxDB, webhooks, and more.
+:::
+
 :::{grid-item-card} API Reference
 :link: reference
 :link-type: doc
@@ -50,5 +56,6 @@ tutorial
 executors
 metrics
 thresholds
+outputs
 reference
 ```
