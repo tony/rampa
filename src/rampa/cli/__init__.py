@@ -13,6 +13,11 @@ from rampa.cli._colors import build_description
 from rampa.cli._formatter import RampaHelpFormatter
 from rampa.cli.check import CHECK_DESCRIPTION, command_check, create_check_subparser
 from rampa.cli.doctor import DOCTOR_DESCRIPTION, command_doctor, create_doctor_subparser
+from rampa.cli.inspect import (
+    INSPECT_DESCRIPTION,
+    command_inspect,
+    create_inspect_subparser,
+)
 from rampa.cli.run import RUN_DESCRIPTION, command_run, create_run_subparser
 
 CLI_DESCRIPTION = build_description(
@@ -31,6 +36,13 @@ CLI_DESCRIPTION = build_description(
             "check",
             [
                 "rampa check load_test.py",
+            ],
+        ),
+        (
+            "inspect",
+            [
+                "rampa inspect load_test.py",
+                "rampa inspect load_test.py --format json",
             ],
         ),
         (
@@ -89,6 +101,14 @@ def create_parser() -> argparse.ArgumentParser:
     )
     create_check_subparser(check_parser)
 
+    inspect_parser = subparsers.add_parser(
+        "inspect",
+        help="show resolved test configuration",
+        formatter_class=RampaHelpFormatter,
+        description=INSPECT_DESCRIPTION,
+    )
+    create_inspect_subparser(inspect_parser)
+
     doctor_parser = subparsers.add_parser(
         "doctor",
         help="check the runtime environment",
@@ -140,5 +160,7 @@ def main(argv: list[str] | None = None) -> None:
         command_run(args)
     elif args.command == "check":
         command_check(args)
+    elif args.command == "inspect":
+        command_inspect(args)
     elif args.command == "doctor":
         command_doctor(args)
