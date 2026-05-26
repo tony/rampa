@@ -13,6 +13,10 @@ True
 True
 >>> "influxdb" in OUTPUT_REGISTRY
 True
+>>> "prometheus" in OUTPUT_REGISTRY
+True
+>>> "otel" in OUTPUT_REGISTRY
+True
 """
 
 from __future__ import annotations
@@ -26,6 +30,8 @@ from rampa.outputs.console import ConsoleOutput
 from rampa.outputs.csv import CSVOutput
 from rampa.outputs.influxdb import InfluxDBOutput
 from rampa.outputs.json import JSONOutput
+from rampa.outputs.otel import OTelOutput
+from rampa.outputs.prometheus import PrometheusOutput
 from rampa.outputs.webhook import WebhookOutput
 
 OUTPUT_REGISTRY: dict[str, type[Output]] = {
@@ -33,6 +39,8 @@ OUTPUT_REGISTRY: dict[str, type[Output]] = {
     "json": JSONOutput,  # type: ignore[dict-item]
     "csv": CSVOutput,  # type: ignore[dict-item]
     "influxdb": InfluxDBOutput,  # type: ignore[dict-item]
+    "prometheus": PrometheusOutput,  # type: ignore[dict-item]
+    "otel": OTelOutput,  # type: ignore[dict-item]
     "webhook": WebhookOutput,  # type: ignore[dict-item]
 }
 
@@ -76,6 +84,8 @@ __all__ = [
     "ConsoleOutput",
     "InfluxDBOutput",
     "JSONOutput",
+    "OTelOutput",
+    "PrometheusOutput",
     "WebhookOutput",
     "get_output",
 ]

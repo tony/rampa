@@ -102,3 +102,52 @@ def test_influxdb_line_protocol_with_tags() -> None:
     )
     line = _sample_to_line(s)
     assert line == "dur,method=GET,status=200 value=45.2 2000000000"
+
+
+def test_prometheus_encode_write_request() -> None:
+    """Prometheus protobuf encoding produces valid bytes."""
+    from rampa.outputs.prometheus import _samples_to_write_request
+
+    samples = [
+        Sample(metric="reqs", value=1.0, timestamp=1000, tags={"method": "GET"}),
+        Sample(metric="dur", value=45.2, timestamp=2000, tags={}),
+    ]
+    data = _samples_to_write_request(samples)
+    assert isinstance(data, bytes)
+    assert len(data) > 0
+
+
+def test_prometheus_compress_roundtrip() -> None:
+    """Prometheus compression produces bytes."""
+    from rampa.outputs.prometheus import _compress
+
+    data = b"hello world" * 100
+    compressed, encoding = _compress(data)
+    assert encoding in {"snappy", "gzip"}
+    assert len(compressed) < len(data)
+
+
+def test_otel_samples_to_otlp() -> None:
+    """OTLP JSON conversion produces valid structure."""
+    from rampa.outputs.otel import _samples_to_otlp
+
+    samples = [
+        Sample(metric="reqs", value=1.0, timestamp=1000, tags={"method": "GET"}),
+        Sample(metric="dur", value=45.2, timestamp=2000, tags={}),
+    ]
+    payload = _samples_to_otlp(samples, "rampa-test")
+    assert "resourceMetrics" in payload
+    rm = payload["resourceMetrics"]
+    assert len(rm) == 1
+    scope_metrics = rm[0]["scopeMetrics"]
+    assert len(scope_metrics) == 1
+    metrics = scope_metrics[0]["metrics"]
+    assert len(metrics) == 2
+    names = {m["name"] for m in metrics}
+    assert names == {"reqs", "dur"}
+
+
+def test_output_registry_has_prometheus_and_otel() -> None:
+    """Prometheus and OTEL backends are registered."""
+    assert "prometheus" in OUTPUT_REGISTRY
+    assert "otel" in OUTPUT_REGISTRY

@@ -13,6 +13,8 @@ Use `--output` to send results to multiple destinations simultaneously.
 | `json` | JSON file | None |
 | `csv` | CSV file | None |
 | `influxdb` | InfluxDB HTTP API | aiohttp (included) |
+| `prometheus` | Prometheus remote write | aiohttp; optional `python-snappy` |
+| `otel` | OpenTelemetry collector | aiohttp (included) |
 | `webhook` | Any HTTP endpoint | aiohttp (included) |
 
 ## CLI usage
@@ -64,6 +66,39 @@ http_req_duration,method=GET,scenario=smoke value=45.2 1716691200000000000
 
 Tags map to InfluxDB tags, the sample value maps to the `value` field,
 and the monotonic nanosecond timestamp maps to the InfluxDB timestamp.
+
+## Prometheus
+
+Pushes metrics to Prometheus via the remote write API. Uses hand-crafted
+protobuf v1 encoding with snappy compression (falls back to gzip if
+`python-snappy` is not installed).
+
+```console
+$ rampa run load_test.py \
+  --output prometheus=http://localhost:9090/api/v1/write
+```
+
+Each sample becomes a Prometheus TimeSeries with `__name__` set to the
+metric name and sample tags as labels. Feeds Grafana dashboards directly.
+
+Install `python-snappy` for optimal compression:
+
+```console
+$ uv add python-snappy
+```
+
+## OpenTelemetry
+
+Exports metrics via OTLP/HTTP+JSON to any OpenTelemetry-compatible
+collector (Grafana Alloy, OTEL Collector, Jaeger, etc.). Zero additional
+dependencies.
+
+```console
+$ rampa run load_test.py --output otel=http://localhost:4318
+```
+
+The `/v1/metrics` path is appended automatically. Uses the JSON wire
+format (proto3 standard JSON mapping) — no protobuf compiler needed.
 
 ## Webhook
 
