@@ -47,6 +47,24 @@ Send results to CSV, InfluxDB, Prometheus, OTEL, and more.
 Live terminal dashboard with metrics, timing, and thresholds.
 :::
 
+:::{grid-item-card} Protocols
+:link: protocols
+:link-type: doc
+HTTP, WebSocket, gRPC, and custom protocol clients.
+:::
+
+:::{grid-item-card} Distributed
+:link: distributed
+:link-type: doc
+Split tests across machines with execution segments.
+:::
+
+:::{grid-item-card} CI Integration
+:link: ci
+:link-type: doc
+GitHub Actions, result comparison, and benchmarking.
+:::
+
 :::{grid-item-card} API Reference
 :link: reference
 :link-type: doc
@@ -64,5 +82,8 @@ metrics
 thresholds
 outputs
 tui
+protocols
+distributed
+ci
 reference
 ```
