@@ -70,6 +70,7 @@ class Worker:
         self.setup_data = setup_data
         self._http: HttpClient | None = None
         self._ws: t.Any = None
+        self._grpc: t.Any = None
 
     @property
     def http(self) -> HttpClient:
@@ -125,6 +126,32 @@ class Worker:
                 {"scenario": self.execution.scenario},
             )
         return self._ws
+
+    @property
+    def grpc(self) -> t.Any:
+        """Lazily-initialized gRPC client with automatic metric emission.
+
+        Requires ``grpcio``. The client is created on first access.
+
+        >>> import queue as q
+        >>> sq: q.SimpleQueue[Sample | None] = q.SimpleQueue()
+        >>> w = Worker(
+        ...     sample_queue=sq,
+        ...     execution=ExecutionInfo(
+        ...         worker_id=1, scenario="s", iteration=0,
+        ...     ),
+        ... )
+        >>> w._grpc is None
+        True
+        """
+        if self._grpc is None:
+            from rampa.protocols.grpc import GrpcClient
+
+            self._grpc = GrpcClient(
+                self._queue,
+                {"scenario": self.execution.scenario},
+            )
+        return self._grpc
 
     def _emit(self, sample: Sample) -> None:
         """Push a sample to the metric engine queue."""

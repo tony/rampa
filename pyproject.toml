@@ -41,6 +41,7 @@ dependencies = [
 [project.optional-dependencies]
 mcp = ["fastmcp>=2.0"]
 tui = ["textual>=3.0"]
+grpc = ["grpcio>=1.70"]
 
 [project.scripts]
 rampa = "rampa.cli:main"

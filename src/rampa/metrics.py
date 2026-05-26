@@ -580,6 +580,12 @@ _BUILTIN_METRICS: list[tuple[str, MetricType, ValueType]] = [
     ("ws_messages_sent", MetricType.COUNTER, ValueType.DEFAULT),
     ("ws_messages_received", MetricType.COUNTER, ValueType.DEFAULT),
     ("ws_errors", MetricType.COUNTER, ValueType.DEFAULT),
+    ("grpc_reqs", MetricType.COUNTER, ValueType.DEFAULT),
+    ("grpc_req_duration", MetricType.TREND, ValueType.TIME),
+    ("grpc_req_failed", MetricType.RATE, ValueType.DEFAULT),
+    ("grpc_streams_opened", MetricType.COUNTER, ValueType.DEFAULT),
+    ("grpc_messages_sent", MetricType.COUNTER, ValueType.DEFAULT),
+    ("grpc_messages_received", MetricType.COUNTER, ValueType.DEFAULT),
 ]
 
 
