@@ -536,23 +536,41 @@ class MetricEngine:
 
             if sample is not None:
                 self._ingest(sample)
+                self._drain_available()
 
             now = time.monotonic()
             if now - last_flush >= self.flush_interval:
                 self._emit_snapshot()
                 last_flush = now
 
-        self._drain_remaining()
+        self._drain_available(limit=None)
         self._emit_snapshot()
 
-    def _drain_remaining(self) -> None:
-        while True:
+    def _drain_available(self, limit: int | None = 10_000) -> int:
+        """Drain available samples without blocking.
+
+        Parameters
+        ----------
+        limit : int | None
+            Maximum samples to drain per call. ``None`` drains until
+            the queue is empty (used during shutdown).
+
+        Returns
+        -------
+        int
+            Number of samples ingested.
+        """
+        count = 0
+        while limit is None or count < limit:
             try:
                 sample = self.sample_queue.get_nowait()
             except queue.Empty:
                 break
-            if sample is not None:
-                self._ingest(sample)
+            if sample is None:
+                break
+            self._ingest(sample)
+            count += 1
+        return count
 
     def _ingest(self, sample: Sample) -> None:
         if self.on_sample is not None:
