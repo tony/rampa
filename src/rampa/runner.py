@@ -38,6 +38,7 @@ async def run_test(
     quiet: bool = False,
     event_log_path: str | None = None,
     extra_outputs: list[t.Any] | None = None,
+    progress: bool = False,
 ) -> RunResult:
     """Execute a test plan through the full lifecycle.
 
@@ -92,7 +93,19 @@ async def run_test(
 
     await output_mgr.start_all()
 
+    progress_task: asyncio.Task[None] | None = None
+    if progress:
+        progress_task = asyncio.create_task(
+            _progress_loop(controller),
+        )
+
     result = await controller.wait()
+
+    if progress_task is not None:
+        progress_task.cancel()
+        from rampa.cli._progress import clear_progress
+
+        clear_progress()
 
     if drain_task is not None:
         await drain_task
@@ -108,6 +121,16 @@ async def run_test(
             json_out.write_summary(result.snapshot, result.threshold_results)
 
     return result
+
+
+async def _progress_loop(controller: RunController) -> None:
+    """Periodically write a single-line progress update."""
+    from rampa.cli._progress import write_progress
+    from rampa.events import SnapshotEvent
+
+    async for event in controller.events():
+        if isinstance(event, SnapshotEvent):
+            write_progress(event.snapshot)
 
 
 async def _drain_events(

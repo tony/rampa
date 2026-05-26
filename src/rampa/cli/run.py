@@ -90,6 +90,12 @@ def create_run_subparser(parser: argparse.ArgumentParser) -> None:
         help="output backend (e.g. csv=results.csv, influxdb=http://...)",
     )
     parser.add_argument(
+        "--progress",
+        action="store_true",
+        default=False,
+        help="show single-line progress during execution",
+    )
+    parser.add_argument(
         "--tui",
         action="store_true",
         default=False,
@@ -170,6 +176,7 @@ def command_run(args: argparse.Namespace) -> None:
             quiet=args.quiet,
             event_log_path=args.event_log,
             extra_outputs=extra,
+            progress=getattr(args, "progress", False),
         ),
     )
     sys.exit(status_to_exit_code(result.status))
