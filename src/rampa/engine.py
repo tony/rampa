@@ -12,6 +12,8 @@ from __future__ import annotations
 import asyncio
 import logging
 import queue
+import signal
+import sys
 import time
 import typing as t
 import uuid
@@ -206,6 +208,12 @@ class Engine:
 
         abort_event = asyncio.Event()
 
+        installed_signals: list[int] = []
+        if sys.platform != "win32":
+            for sig in (signal.SIGINT, signal.SIGTERM):
+                loop.add_signal_handler(sig, abort_event.set)
+                installed_signals.append(sig)
+
         primary_queue = bus.subscribe()
 
         run_task = asyncio.create_task(
@@ -216,6 +224,7 @@ class Engine:
                 metric_engine=metric_engine,
                 abort_event=abort_event,
                 bus=bus,
+                installed_signals=installed_signals,
             ),
         )
 
@@ -236,6 +245,7 @@ class Engine:
         metric_engine: MetricEngine,
         abort_event: asyncio.Event,
         bus: EventBus,
+        installed_signals: list[int] | None = None,
     ) -> RunResult:
         """Execute the full lifecycle: setup → execute → teardown."""
         status = RunStatus.PASSED
@@ -302,6 +312,11 @@ class Engine:
                         error = exc
 
         finally:
+            if installed_signals and sys.platform != "win32":
+                loop = asyncio.get_running_loop()
+                for sig in installed_signals:
+                    loop.remove_signal_handler(sig)
+
             metric_engine.stop()
             await asyncio.sleep(0)
             snapshot = metric_engine.get_latest_snapshot()
