@@ -1,22 +1,23 @@
-"""Output protocol, manager, and built-in outputs for rampa.
+"""Output protocol, manager, and built-in output re-exports.
 
 Outputs consume metric sample batches asynchronously. The OutputManager fans
 out each batch to all registered outputs on a periodic timer. Outputs never
 reach into executor or worker internals.
+
+Built-in output backends live in :mod:`rampa.outputs` and are re-exported
+here for backwards compatibility.
 
 >>> import rampa.output
 """
 
 from __future__ import annotations
 
-import json
-import pathlib
-import sys
 import typing as t
 from dataclasses import dataclass, field
 
 from rampa._types import Sample
-from rampa.metrics import MetricSnapshot
+from rampa.outputs.console import ConsoleOutput
+from rampa.outputs.json import JSONOutput
 
 
 class Output(t.Protocol):
@@ -121,159 +122,9 @@ class OutputManager:
             await output.stop(error)
 
 
-class ConsoleOutput:
-    """Renders an end-of-test summary to a text stream.
-
-    >>> co = ConsoleOutput()
-    >>> co._stream is sys.stdout
-    True
-    """
-
-    def __init__(self, stream: t.TextIO | None = None) -> None:
-        self._stream: t.TextIO = stream or sys.stdout
-        self._snapshot: MetricSnapshot | None = None
-
-    async def start(self) -> None:
-        """No-op for console output."""
-
-    async def add_samples(self, samples: list[Sample]) -> None:
-        """No-op — console renders from the final snapshot, not samples."""
-
-    async def stop(self, error: Exception | None = None) -> None:
-        """No-op — rendering happens via render_summary."""
-
-    def render_summary(
-        self,
-        snapshot: MetricSnapshot,
-        threshold_results: list[t.Any] | None = None,
-    ) -> None:
-        """Render a human-readable summary to the stream.
-
-        Parameters
-        ----------
-        snapshot : MetricSnapshot
-            Final metric aggregation snapshot.
-        threshold_results : list[Any] | None
-            Threshold evaluation results.
-
-        >>> import io
-        >>> from rampa.metrics import MetricSnapshot
-        >>> stream = io.StringIO()
-        >>> co = ConsoleOutput(stream=stream)
-        >>> snap = MetricSnapshot(
-        ...     timestamp=0,
-        ...     duration=10.0,
-        ...     values={"http_reqs": {"count": 100.0, "rate": 10.0}},
-        ... )
-        >>> co.render_summary(snap)
-        >>> "http_reqs" in stream.getvalue()
-        True
-        """
-        w = self._stream.write
-
-        w("\n")
-        w("=" * 60 + "\n")
-        w(f"  rampa summary (duration: {snapshot.duration:.1f}s)\n")
-        w("=" * 60 + "\n\n")
-
-        if threshold_results:
-            w("  thresholds:\n")
-            for result in threshold_results:
-                status = "✓" if result.passed else "✗"
-                w(f"    {status} {result.source}\n")
-            w("\n")
-
-        for metric_name, values in sorted(snapshot.values.items()):
-            w(f"  {metric_name}:\n")
-            for key, val in values.items():
-                if isinstance(val, float) and val == int(val) and val < 1e15:
-                    w(f"    {key}: {int(val)}\n")
-                elif isinstance(val, float):
-                    w(f"    {key}: {val:.4f}\n")
-                else:
-                    w(f"    {key}: {val}\n")
-            w("\n")
-
-
-class JSONOutput:
-    """Writes samples and summary to a JSON file.
-
-    >>> jo = JSONOutput("/dev/null")
-    >>> str(jo._path)
-    '/dev/null'
-    """
-
-    def __init__(self, path: str) -> None:
-        self._path = pathlib.Path(path)
-        self._samples: list[dict[str, t.Any]] = []
-
-    async def start(self) -> None:
-        """No-op — file is written at stop time."""
-
-    async def add_samples(self, samples: list[Sample]) -> None:
-        """Buffer samples for JSON serialization.
-
-        Parameters
-        ----------
-        samples : list[Sample]
-            Batch of samples.
-        """
-        for s in samples:
-            self._samples.append(
-                {
-                    "metric": s.metric,
-                    "value": s.value,
-                    "timestamp": s.timestamp,
-                    "tags": s.tags,
-                }
-            )
-
-    async def stop(self, error: Exception | None = None) -> None:
-        """Write accumulated samples to the JSON file.
-
-        Parameters
-        ----------
-        error : Exception | None
-            The test error, if any.
-        """
-        data = {"samples": self._samples}
-        with self._path.open("w") as f:
-            json.dump(data, f, indent=2)
-
-    def write_summary(
-        self,
-        snapshot: MetricSnapshot,
-        threshold_results: list[t.Any] | None = None,
-    ) -> None:
-        """Append summary data to the JSON output file.
-
-        Parameters
-        ----------
-        snapshot : MetricSnapshot
-            Final metric aggregation snapshot.
-        threshold_results : list[Any] | None
-            Threshold evaluation results.
-        """
-        try:
-            with self._path.open() as f:
-                data = json.load(f)
-        except FileNotFoundError, json.JSONDecodeError:
-            data = {}
-
-        data["summary"] = {
-            "duration": snapshot.duration,
-            "metrics": snapshot.values,
-        }
-        if threshold_results:
-            data["thresholds"] = [
-                {
-                    "source": r.source,
-                    "passed": r.passed,
-                    "lhs": r.lhs,
-                    "rhs": r.rhs,
-                }
-                for r in threshold_results
-            ]
-
-        with self._path.open("w") as f:
-            json.dump(data, f, indent=2)
+__all__ = [
+    "ConsoleOutput",
+    "JSONOutput",
+    "Output",
+    "OutputManager",
+]
