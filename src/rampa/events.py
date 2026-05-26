@@ -113,6 +113,23 @@ class ThresholdEvent(EngineEvent):
 
 
 @dataclass(frozen=True)
+class LiveThresholdEvent(EngineEvent):
+    """Mid-run threshold evaluation result.
+
+    Emitted periodically during execution by the MetricEngine.
+
+    >>> e = LiveThresholdEvent(
+    ...     run_id="x", timestamp_ns=0, results=[], will_abort=False,
+    ... )
+    >>> e.will_abort
+    False
+    """
+
+    results: list[ThresholdResult]
+    will_abort: bool = False
+
+
+@dataclass(frozen=True)
 class RunResult:
     """Result of a completed test run.
 

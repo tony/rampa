@@ -237,23 +237,50 @@ class Engine:
                 ),
             )
 
+        abort_event = asyncio.Event()
+
+        from rampa.thresholds import parse_submetric
+
+        live_thresholds: dict[str, list[Threshold]] | None = None
+        if self._plan.config.thresholds:
+            live_thresholds = {}
+            for metric_name, expressions in self._plan.config.thresholds.items():
+                _base, tag_filter = parse_submetric(metric_name)
+                if tag_filter:
+                    registry.get_or_create_sub_sink(_base, tag_filter)
+                live_thresholds[metric_name] = [
+                    Threshold(
+                        source=expr,
+                        expression=parse_threshold(expr),
+                    )
+                    if isinstance(expr, str)
+                    else expr
+                    for expr in expressions
+                ]
+
+        def _bridge_threshold(results: list[t.Any]) -> None:
+            from rampa.events import LiveThresholdEvent
+
+            bus.publish_threadsafe(
+                LiveThresholdEvent(
+                    run_id=run_id,
+                    timestamp_ns=time.monotonic_ns(),
+                    results=results,
+                    will_abort=any(not r.passed for r in results if hasattr(r, "passed")),
+                ),
+            )
+
         metric_engine = MetricEngine(
             registry=registry,
             sample_queue=sample_queue,
             flush_interval=self._options.metric_flush_interval,
             on_sample=self._options.on_sample,
             on_snapshot=_bridge_snapshot,
+            thresholds=live_thresholds or {},
+            on_threshold=_bridge_threshold if live_thresholds else None,
+            abort_callback=abort_event.set if live_thresholds else None,
         )
         metric_engine.start()
-
-        from rampa.thresholds import parse_submetric
-
-        for metric_name in self._plan.config.thresholds:
-            _base, tag_filter = parse_submetric(metric_name)
-            if tag_filter:
-                registry.get_or_create_sub_sink(_base, tag_filter)
-
-        abort_event = asyncio.Event()
         pause_controller = PauseController()
 
         installed_signals: list[int] = []

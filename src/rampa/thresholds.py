@@ -226,10 +226,10 @@ def evaluate_threshold(
 
 
 def evaluate_thresholds(
-    metric_thresholds: dict[str, list[Threshold]],
-    sinks: dict[str, Sink],
+    metric_thresholds: t.Mapping[str, t.Sequence[Threshold]],
+    sinks: t.Mapping[str, Sink],
     duration: float,
-    sub_sinks: dict[tuple[str, frozenset[tuple[str, str]]], Sink] | None = None,
+    sub_sinks: t.Mapping[tuple[str, frozenset[tuple[str, str]]], Sink] | None = None,
 ) -> list[ThresholdResult]:
     """Evaluate all thresholds against their metric sinks.
 

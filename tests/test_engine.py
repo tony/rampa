@@ -259,6 +259,41 @@ def test_pause_events_emitted() -> None:
     assert ResumeEvent in event_types
 
 
+def test_live_threshold_events_emitted() -> None:
+    """LiveThresholdEvent is emitted during execution when thresholds exist."""
+    from rampa.engine import EngineOptions
+    from rampa.events import LiveThresholdEvent
+
+    async def _slow(w: object) -> None:
+        await asyncio.sleep(0.01)
+
+    async def _run() -> bool:
+        plan = _make_plan(
+            _slow,
+            duration_ms=500,
+            thresholds={"iteration_duration": ["avg<10000"]},
+        )
+        controller = await Engine(
+            plan,
+            EngineOptions(metric_flush_interval=0.05),
+        ).start()
+
+        found_live = False
+
+        async def _collect() -> None:
+            nonlocal found_live
+            async for event in controller.events():
+                if isinstance(event, LiveThresholdEvent):
+                    found_live = True
+
+        collect_task = asyncio.create_task(_collect())
+        await controller.wait()
+        await collect_task
+        return found_live
+
+    assert asyncio.run(_run())
+
+
 def test_snapshot_events_emitted() -> None:
     """SnapshotEvent is emitted via the EventBus from MetricEngine."""
 

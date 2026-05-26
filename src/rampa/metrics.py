@@ -10,6 +10,7 @@ The metric engine runs in a dedicated thread, draining samples from a
 from __future__ import annotations
 
 import collections
+import logging
 import math
 import queue
 import threading
@@ -18,6 +19,8 @@ import typing as t
 from dataclasses import dataclass, field
 
 from rampa._types import MetricType, Sample, ValueType
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -539,9 +542,23 @@ class MetricEngine:
     flush_interval: float = 0.05
     on_sample: t.Callable[[Sample], None] | None = None
     on_snapshot: t.Callable[[MetricSnapshot], None] | None = None
+    thresholds: dict[str, list[t.Any]] = field(default_factory=dict)
+    threshold_interval: float = 2.0
+    on_threshold: t.Callable[[list[t.Any]], None] | None = None
+    abort_callback: t.Callable[[], None] | None = None
     _thread: threading.Thread = field(init=False, repr=False)
     _running: bool = field(init=False, default=False, repr=False)
     _start_time: float = field(init=False, default=0.0, repr=False)
+    _last_threshold_check: float = field(
+        init=False,
+        default=0.0,
+        repr=False,
+    )
+    _grace_deadlines: dict[str, float] = field(
+        init=False,
+        default_factory=dict,
+        repr=False,
+    )
     _snapshots: collections.deque[MetricSnapshot] = field(
         init=False,
         repr=False,
@@ -659,3 +676,59 @@ class MetricEngine:
             self._snapshots.append(snapshot)
         if self.on_snapshot is not None:
             self.on_snapshot(snapshot)
+
+        now = time.monotonic()
+        if self.thresholds and now - self._last_threshold_check >= self.threshold_interval:
+            self._last_threshold_check = now
+            self._check_thresholds(snapshot, elapsed)
+
+    def _check_thresholds(
+        self,
+        snapshot: MetricSnapshot,
+        elapsed: float,
+    ) -> None:
+        from rampa.thresholds import evaluate_thresholds
+
+        results = evaluate_thresholds(
+            self.thresholds,
+            self.registry.all_sinks(),
+            elapsed,
+            sub_sinks=self.registry.all_sub_sinks(),
+        )
+
+        if self.on_threshold is not None:
+            self.on_threshold(results)
+
+        for result in results:
+            if result.passed:
+                self._grace_deadlines.pop(result.source, None)
+                continue
+
+            threshold = self._find_threshold(result.source)
+            if threshold is None or not threshold.abort_on_fail:
+                continue
+
+            now = time.monotonic()
+            if threshold.grace_period is not None and threshold.grace_period > 0:
+                if result.source not in self._grace_deadlines:
+                    self._grace_deadlines[result.source] = now + threshold.grace_period
+                    continue
+                if now < self._grace_deadlines[result.source]:
+                    continue
+
+            if self.abort_callback is not None:
+                logger.warning(
+                    "threshold abort: %s",
+                    result.source,
+                )
+                self.abort_callback()
+                return
+
+    def _find_threshold(self, source: str) -> t.Any | None:
+        if self.thresholds is None:
+            return None
+        for thresholds in self.thresholds.values():
+            for threshold in thresholds:
+                if threshold.source == source:
+                    return threshold
+        return None
