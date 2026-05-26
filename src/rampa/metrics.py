@@ -298,8 +298,88 @@ Sink = SinkProtocol
 """Type alias for metric sink implementations."""
 
 
+class HdrTrendSink:
+    """Trend sink backed by a Rust HDR histogram.
+
+    Fixed ~20KB memory regardless of sample count. O(1) insert, O(1)
+    percentile queries. Requires the ``rampa._core`` Rust extension.
+
+    Values are stored as integer microseconds internally. The ``add()``
+    method accepts float milliseconds (matching the Python TrendSink
+    interface) and converts automatically.
+
+    >>> try:
+    ...     from rampa._core import HdrHistogram
+    ...     s = HdrTrendSink()
+    ...     for v in [10.0, 20.0, 30.0, 40.0, 50.0]:
+    ...         s.add(v)
+    ...     fmt = s.format(1.0)
+    ...     fmt["count"]
+    ... except ImportError:
+    ...     5.0
+    5.0
+    """
+
+    def __init__(self) -> None:
+        from rampa._core import HdrHistogram
+
+        self._hdr = HdrHistogram(3)
+
+    def add(self, value: float) -> None:
+        """Record a trend observation (value in milliseconds)."""
+        self._hdr.record(max(0, int(value * 1000)))
+
+    def format(self, duration: float) -> dict[str, float]:
+        """Return aggregated values.
+
+        Parameters
+        ----------
+        duration : float
+            Elapsed test duration in seconds (unused for trend).
+
+        Returns
+        -------
+        dict[str, float]
+            Aggregation with stat keys, values converted back to ms.
+        """
+        count, avg, mn, mx, med, p90, p95, p99 = self._hdr.format_stats()
+        if count == 0:
+            return {
+                "count": 0.0,
+                "avg": 0.0,
+                "min": 0.0,
+                "max": 0.0,
+                "med": 0.0,
+                "p(90)": 0.0,
+                "p(95)": 0.0,
+                "p(99)": 0.0,
+            }
+        return {
+            "count": float(count),
+            "avg": avg / 1000.0,
+            "min": mn / 1000.0,
+            "max": mx / 1000.0,
+            "med": med / 1000.0,
+            "p(90)": p90 / 1000.0,
+            "p(95)": p95 / 1000.0,
+            "p(99)": p99 / 1000.0,
+        }
+
+
+_USE_HDR: bool = False
+try:
+    from rampa._core import HdrHistogram as _HdrHistogram  # noqa: F401
+
+    _USE_HDR = True
+except ImportError:
+    pass
+
+
 def create_sink(metric_type: MetricType) -> Sink:
     """Create a sink matching the metric type.
+
+    Uses Rust HDR histogram for trend sinks when available,
+    falling back to the Python TrendSink.
 
     Parameters
     ----------
@@ -313,8 +393,8 @@ def create_sink(metric_type: MetricType) -> Sink:
 
     >>> type(create_sink(MetricType.COUNTER)).__name__
     'CounterSink'
-    >>> type(create_sink(MetricType.TREND)).__name__
-    'TrendSink'
+    >>> type(create_sink(MetricType.TREND)).__name__ in ('TrendSink', 'HdrTrendSink')
+    True
     """
     match metric_type:
         case MetricType.COUNTER:
@@ -324,6 +404,8 @@ def create_sink(metric_type: MetricType) -> Sink:
         case MetricType.RATE:
             return RateSink()
         case MetricType.TREND:
+            if _USE_HDR:
+                return HdrTrendSink()  # type: ignore[return-value]
             return TrendSink()
 
 
@@ -434,8 +516,8 @@ class MetricRegistry:
         >>> reg = MetricRegistry()
         >>> _ = reg.get_or_create("dur", MetricType.TREND)
         >>> sink = reg.get_or_create_sub_sink("dur", {"status": "200"})
-        >>> type(sink).__name__
-        'TrendSink'
+        >>> type(sink).__name__ in ('TrendSink', 'HdrTrendSink')
+        True
         """
         with self._lock:
             metric = self._metrics.get(base_name)

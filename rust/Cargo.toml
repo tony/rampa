@@ -1,0 +1,15 @@
+[package]
+name = "rampa-core"
+version = "0.0.1"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+publish = false
+
+[lib]
+name = "_core"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.25", features = ["extension-module"] }
+hdrhistogram = "7"

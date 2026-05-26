@@ -86,6 +86,13 @@ docs = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.uv]
+cache-keys = [
+  {file = "pyproject.toml"},
+  {file = "rust/Cargo.toml"},
+  {file = "rust/src/**/*.rs"},
+]
+
 [tool.uv.exclude-newer-package]
 gp-furo-theme = false
 gp-sphinx = false
@@ -103,6 +110,10 @@ sphinx-gp-sitemap = false
 sphinx-gp-theme = false
 sphinx-ux-autodoc-layout = false
 sphinx-ux-badges = false
+
+[tool.maturin]
+manifest-path = "rust/Cargo.toml"
+module-name = "rampa._core"
 
 [tool.ty.environment]
 python-version = "3.14"
