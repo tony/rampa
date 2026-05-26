@@ -14,6 +14,7 @@ import logging
 import queue
 import signal
 import sys
+import threading
 import time
 import typing as t
 import uuid
@@ -284,7 +285,7 @@ class Engine:
         pause_controller = PauseController()
 
         installed_signals: list[int] = []
-        if sys.platform != "win32":
+        if sys.platform != "win32" and threading.current_thread() is threading.main_thread():
             for sig in (signal.SIGINT, signal.SIGTERM):
                 loop.add_signal_handler(sig, abort_event.set)
                 installed_signals.append(sig)
