@@ -38,7 +38,13 @@ Expression syntax and pass/fail evaluation.
 :::{grid-item-card} Outputs
 :link: outputs
 :link-type: doc
-Send results to CSV, InfluxDB, webhooks, and more.
+Send results to CSV, InfluxDB, Prometheus, OTEL, and more.
+:::
+
+:::{grid-item-card} TUI Dashboard
+:link: tui
+:link-type: doc
+Live terminal dashboard with metrics, timing, and thresholds.
 :::
 
 :::{grid-item-card} API Reference
@@ -57,5 +63,6 @@ executors
 metrics
 thresholds
 outputs
+tui
 reference
 ```
