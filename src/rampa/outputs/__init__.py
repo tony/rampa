@@ -28,6 +28,7 @@ if t.TYPE_CHECKING:
 
 from rampa.outputs.console import ConsoleOutput
 from rampa.outputs.csv import CSVOutput
+from rampa.outputs.github import GitHubActionsOutput
 from rampa.outputs.influxdb import InfluxDBOutput
 from rampa.outputs.json import JSONOutput
 from rampa.outputs.otel import OTelOutput
@@ -41,6 +42,7 @@ OUTPUT_REGISTRY: dict[str, type[Output]] = {
     "influxdb": InfluxDBOutput,  # type: ignore[dict-item]
     "prometheus": PrometheusOutput,  # type: ignore[dict-item]
     "otel": OTelOutput,  # type: ignore[dict-item]
+    "github": GitHubActionsOutput,  # type: ignore[dict-item]
     "webhook": WebhookOutput,  # type: ignore[dict-item]
 }
 
