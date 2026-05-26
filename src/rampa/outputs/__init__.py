@@ -9,6 +9,10 @@ flag resolution.
 True
 >>> "json" in OUTPUT_REGISTRY
 True
+>>> "csv" in OUTPUT_REGISTRY
+True
+>>> "influxdb" in OUTPUT_REGISTRY
+True
 """
 
 from __future__ import annotations
@@ -19,11 +23,17 @@ if t.TYPE_CHECKING:
     from rampa.output import Output
 
 from rampa.outputs.console import ConsoleOutput
+from rampa.outputs.csv import CSVOutput
+from rampa.outputs.influxdb import InfluxDBOutput
 from rampa.outputs.json import JSONOutput
+from rampa.outputs.webhook import WebhookOutput
 
 OUTPUT_REGISTRY: dict[str, type[Output]] = {
     "console": ConsoleOutput,  # type: ignore[dict-item]
     "json": JSONOutput,  # type: ignore[dict-item]
+    "csv": CSVOutput,  # type: ignore[dict-item]
+    "influxdb": InfluxDBOutput,  # type: ignore[dict-item]
+    "webhook": WebhookOutput,  # type: ignore[dict-item]
 }
 
 
@@ -62,7 +72,10 @@ def get_output(name: str, destination: str = "") -> Output:
 
 __all__ = [
     "OUTPUT_REGISTRY",
+    "CSVOutput",
     "ConsoleOutput",
+    "InfluxDBOutput",
     "JSONOutput",
+    "WebhookOutput",
     "get_output",
 ]

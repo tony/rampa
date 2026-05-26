@@ -74,11 +74,12 @@ class JSONOutput:
         threshold_results : list[Any] | None
             Threshold evaluation results.
         """
+        _load_errors = (FileNotFoundError, json.JSONDecodeError)
         try:
             with self._path.open() as f:
                 data = json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
-            data = {}
+        except _load_errors:
+            data: dict[str, t.Any] = {}
 
         data["summary"] = {
             "duration": snapshot.duration,
