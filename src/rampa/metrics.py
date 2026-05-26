@@ -574,6 +574,12 @@ _BUILTIN_METRICS: list[tuple[str, MetricType, ValueType]] = [
     ("http_req_sending", MetricType.TREND, ValueType.TIME),
     ("http_req_waiting", MetricType.TREND, ValueType.TIME),
     ("http_req_receiving", MetricType.TREND, ValueType.TIME),
+    ("ws_sessions", MetricType.COUNTER, ValueType.DEFAULT),
+    ("ws_connecting", MetricType.TREND, ValueType.TIME),
+    ("ws_session_duration", MetricType.TREND, ValueType.TIME),
+    ("ws_messages_sent", MetricType.COUNTER, ValueType.DEFAULT),
+    ("ws_messages_received", MetricType.COUNTER, ValueType.DEFAULT),
+    ("ws_errors", MetricType.COUNTER, ValueType.DEFAULT),
 ]
 
 

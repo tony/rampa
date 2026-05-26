@@ -69,6 +69,7 @@ class Worker:
         self.execution = execution
         self.setup_data = setup_data
         self._http: HttpClient | None = None
+        self._ws: t.Any = None
 
     @property
     def http(self) -> HttpClient:
@@ -97,6 +98,33 @@ class Worker:
                 {"scenario": self.execution.scenario},
             )
         return self._http
+
+    @property
+    def ws(self) -> t.Any:
+        """Lazily-initialized WebSocket client with automatic metric emission.
+
+        The client is created on first access. Uses aiohttp's WebSocket
+        support under the hood.
+
+        >>> import queue as q
+        >>> sq: q.SimpleQueue[Sample | None] = q.SimpleQueue()
+        >>> w = Worker(
+        ...     sample_queue=sq,
+        ...     execution=ExecutionInfo(
+        ...         worker_id=1, scenario="s", iteration=0,
+        ...     ),
+        ... )
+        >>> w._ws is None
+        True
+        """
+        if self._ws is None:
+            from rampa.protocols.websocket import WebSocketClient
+
+            self._ws = WebSocketClient(
+                self._queue,
+                {"scenario": self.execution.scenario},
+            )
+        return self._ws
 
     def _emit(self, sample: Sample) -> None:
         """Push a sample to the metric engine queue."""
