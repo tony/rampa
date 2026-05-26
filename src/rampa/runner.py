@@ -12,6 +12,7 @@ import asyncio
 import json
 import logging
 import pathlib
+import typing as t
 
 from rampa.engine import Engine, EngineOptions, RunController
 from rampa.errors import ExitCode
@@ -36,6 +37,7 @@ async def run_test(
     json_output_path: str | None = None,
     quiet: bool = False,
     event_log_path: str | None = None,
+    extra_outputs: list[t.Any] | None = None,
 ) -> RunResult:
     """Execute a test plan through the full lifecycle.
 
@@ -52,6 +54,8 @@ async def run_test(
         Suppress console summary.
     event_log_path : str | None
         Path for JSONL event log. None disables event logging.
+    extra_outputs : list[Any] | None
+        Additional output backends from ``--output`` flags.
 
     Returns
     -------
@@ -81,6 +85,10 @@ async def run_test(
     if json_output_path:
         json_out = JSONOutput(json_output_path)
         output_mgr.add(json_out)
+
+    if extra_outputs:
+        for out in extra_outputs:
+            output_mgr.add(out)
 
     await output_mgr.start_all()
 

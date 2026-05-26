@@ -81,6 +81,14 @@ def create_run_subparser(parser: argparse.ArgumentParser) -> None:
         default=False,
         help="suppress console summary",
     )
+    parser.add_argument(
+        "--output",
+        "-O",
+        action="append",
+        default=None,
+        dest="extra_outputs",
+        help="output backend (e.g. csv=results.csv, influxdb=http://...)",
+    )
 
 
 def command_run(args: argparse.Namespace) -> None:
@@ -123,7 +131,22 @@ def command_run(args: argparse.Namespace) -> None:
             sys.exit(ExitCode.INVALID_CONFIG)
         plan.scenarios = {args.scenario: plan.scenarios[args.scenario]}
 
+    from rampa.output import Output
+    from rampa.outputs import get_output
     from rampa.runner import run_test, status_to_exit_code
+
+    extra: list[Output] = []
+    if args.extra_outputs:
+        for spec in args.extra_outputs:
+            if "=" in spec:
+                name, dest = spec.split("=", 1)
+            else:
+                name, dest = spec, ""
+            try:
+                extra.append(get_output(name.strip(), dest.strip()))
+            except ValueError as e:
+                print(f"Error: {e}", file=sys.stderr)
+                sys.exit(ExitCode.INVALID_CONFIG)
 
     result = asyncio.run(
         run_test(
@@ -131,6 +154,7 @@ def command_run(args: argparse.Namespace) -> None:
             json_output_path=args.json_output,
             quiet=args.quiet,
             event_log_path=args.event_log,
+            extra_outputs=extra,
         ),
     )
     sys.exit(status_to_exit_code(result.status))
