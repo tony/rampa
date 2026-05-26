@@ -65,6 +65,28 @@ class PhaseEvent(EngineEvent):
 
 
 @dataclass(frozen=True)
+class PauseEvent(EngineEvent):
+    """Emitted when execution is paused.
+
+    >>> e = PauseEvent(run_id="x", timestamp_ns=0)
+    >>> e.run_id
+    'x'
+    """
+
+
+@dataclass(frozen=True)
+class ResumeEvent(EngineEvent):
+    """Emitted when execution resumes after a pause.
+
+    >>> e = ResumeEvent(run_id="x", timestamp_ns=0, paused_seconds=1.5)
+    >>> e.paused_seconds
+    1.5
+    """
+
+    paused_seconds: float
+
+
+@dataclass(frozen=True)
 class SnapshotEvent(EngineEvent):
     """Periodic metric snapshot.
 

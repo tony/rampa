@@ -38,6 +38,7 @@ from rampa.events import (
 from rampa.executors import ExecutionState, create_executor
 from rampa.loader import TestPlan
 from rampa.metrics import MetricEngine, MetricRegistry, MetricSnapshot, register_builtins
+from rampa.pause import PauseController
 from rampa.thresholds import Threshold, evaluate_thresholds, parse_threshold
 
 logger = logging.getLogger(__name__)
@@ -74,6 +75,7 @@ class RunController:
         metric_engine: MetricEngine,
         bus: EventBus,
         primary_queue: asyncio.Queue[EngineEvent | None],
+        pause_controller: PauseController,
     ) -> None:
         self._run_id = run_id
         self._run_task = run_task
@@ -81,6 +83,7 @@ class RunController:
         self._metric_engine = metric_engine
         self._bus = bus
         self._primary_queue = primary_queue
+        self._pause_controller = pause_controller
         self._stopped = False
 
     @property
@@ -112,6 +115,43 @@ class RunController:
             self._stopped = True
             self._abort_event.set()
             logger.info("stop requested: %s", reason or "no reason given")
+
+    def pause(self) -> None:
+        """Pause execution.
+
+        Executors will block before their next iteration until
+        ``resume()`` is called. Idempotent.
+        """
+        from rampa.events import PauseEvent
+
+        self._pause_controller.pause()
+        self._bus.publish(
+            PauseEvent(
+                run_id=self._run_id,
+                timestamp_ns=time.monotonic_ns(),
+            ),
+        )
+        logger.info("execution paused")
+
+    def resume(self) -> None:
+        """Resume execution after a pause. Idempotent."""
+        from rampa.events import ResumeEvent
+
+        paused = self._pause_controller.total_paused_seconds
+        self._pause_controller.resume()
+        self._bus.publish(
+            ResumeEvent(
+                run_id=self._run_id,
+                timestamp_ns=time.monotonic_ns(),
+                paused_seconds=paused,
+            ),
+        )
+        logger.info("execution resumed (paused %.2fs)", paused)
+
+    @property
+    def is_paused(self) -> bool:
+        """Return whether execution is currently paused."""
+        return self._pause_controller.is_paused
 
     def snapshot(self) -> MetricSnapshot | None:
         """Return the latest metric snapshot, or None if none emitted."""
@@ -207,6 +247,7 @@ class Engine:
         metric_engine.start()
 
         abort_event = asyncio.Event()
+        pause_controller = PauseController()
 
         installed_signals: list[int] = []
         if sys.platform != "win32":
@@ -225,6 +266,7 @@ class Engine:
                 abort_event=abort_event,
                 bus=bus,
                 installed_signals=installed_signals,
+                pause_controller=pause_controller,
             ),
         )
 
@@ -235,6 +277,7 @@ class Engine:
             metric_engine=metric_engine,
             bus=bus,
             primary_queue=primary_queue,
+            pause_controller=pause_controller,
         )
 
     async def _run(
@@ -246,6 +289,7 @@ class Engine:
         abort_event: asyncio.Event,
         bus: EventBus,
         installed_signals: list[int] | None = None,
+        pause_controller: PauseController | None = None,
     ) -> RunResult:
         """Execute the full lifecycle: setup → execute → teardown."""
         status = RunStatus.PASSED
@@ -294,6 +338,7 @@ class Engine:
                                 worker_fn=fn,
                                 scenario=name,
                                 setup_data=setup_data,
+                                pause_controller=pause_controller or PauseController(),
                             )
                             tg.create_task(executor.run(state))
                 except Exception as exc:
