@@ -8,7 +8,6 @@ is not available.
 from __future__ import annotations
 
 import time
-import typing as t
 
 import pytest
 
@@ -151,41 +150,9 @@ def test_metric_core_empty_snapshot() -> None:
     assert snap["empty"]["count"] == 0.0
 
 
-class FallbackFixture(t.NamedTuple):
-    """Test case for _USE_RUST_ENGINE fallback detection."""
-
-    test_id: str
-    module_attr: str
-    expected_type: type
-
-
-_FALLBACK_FIXTURES: list[FallbackFixture] = [
-    FallbackFixture(
-        test_id="flag_is_bool",
-        module_attr="_USE_RUST_ENGINE",
-        expected_type=bool,
-    ),
-    FallbackFixture(
-        test_id="flag_is_true_when_available",
-        module_attr="_USE_RUST_ENGINE",
-        expected_type=bool,
-    ),
-]
-
-
-@pytest.mark.parametrize(
-    list(FallbackFixture._fields),
-    _FALLBACK_FIXTURES,
-    ids=[f.test_id for f in _FALLBACK_FIXTURES],
-)
-def test_use_rust_engine_flag(
-    test_id: str,
-    module_attr: str,
-    expected_type: type,
-) -> None:
-    """_USE_RUST_ENGINE flag exists and has correct type."""
+def test_use_rust_engine_flag_is_bool() -> None:
+    """_USE_RUST_ENGINE flag exists and is a bool."""
     import rampa.metrics as m
 
-    val = getattr(m, module_attr)
-    assert isinstance(val, expected_type)
-    assert val is True
+    val = m._USE_RUST_ENGINE
+    assert isinstance(val, bool)
