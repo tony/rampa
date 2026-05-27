@@ -1,6 +1,6 @@
 [project]
 name = "rampa"
-version = "0.0.1a0"
+version = "0.0.1a1.dev0"
 description = "Load testing framework"
 requires-python = ">=3.14,<4.0"
 authors = [
@@ -89,8 +89,8 @@ docs = [
 ]
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
 
 [tool.uv]
 cache-keys = [
@@ -120,6 +120,7 @@ sphinx-ux-badges = false
 [tool.maturin]
 manifest-path = "rust/Cargo.toml"
 module-name = "rampa._core"
+python-source = "src"
 
 [tool.ty.environment]
 python-version = "3.14"
