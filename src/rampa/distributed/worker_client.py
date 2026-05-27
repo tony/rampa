@@ -8,6 +8,8 @@ runs load tests locally, and streams samples back.
 
 from __future__ import annotations
 
+import asyncio
+import functools
 import logging
 import queue
 import typing as t
@@ -109,10 +111,13 @@ class WorkerClient:
         sample_queue : queue.SimpleQueue[Sample | None]
             Local engine sample queue.
         """
+        loop = asyncio.get_running_loop()
         buffer: list[Sample] = []
         while True:
             try:
-                sample = sample_queue.get(timeout=0.1)
+                sample = await loop.run_in_executor(
+                    None, functools.partial(sample_queue.get, timeout=0.1)
+                )
             except Exception:
                 if buffer:
                     await self._flush_samples(buffer)
