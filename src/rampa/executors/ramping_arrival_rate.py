@@ -6,10 +6,12 @@
 from __future__ import annotations
 
 import asyncio
+import time
 
 from rampa._types import make_sample
 from rampa.config import ScenarioConfig
 from rampa.executors import ExecutionState, register_executor, run_iteration
+from rampa.rate_controller import RampingRateController
 
 
 class RampingArrivalRateExecutor:
@@ -49,9 +51,9 @@ class RampingArrivalRateExecutor:
     async def run(self, state: ExecutionState) -> None:
         """Execute ramping arrival-rate stages.
 
-        Uses absolute deadlines per stage and batch admission when the
-        event loop wakes late. Dropped iterations always consume their
-        timeslot.
+        Delegates deadline arithmetic to a ``RampingRateController``
+        (Python or Rust) per stage. Batch-admits all due ticks per
+        wake cycle.
 
         Parameters
         ----------
@@ -60,40 +62,35 @@ class RampingArrivalRateExecutor:
         """
         sem = asyncio.Semaphore(self._max_vus)
         current_rate = self._start_rate
-        loop = asyncio.get_running_loop()
+        time_unit_ns = self._time_unit * 1_000_000_000
 
         async with asyncio.TaskGroup() as tg:
             for stage in self._stages:
                 if state.abort_event.is_set():
                     break
                 target_rate = float(stage.target)
-                duration_s = stage.duration.total_seconds()
-                stage_start = loop.time()
-                tick = 0
-                accumulated = 0.0
+                duration_ns = int(stage.duration.total_seconds() * 1_000_000_000)
+                stage_start_ns = time.monotonic_ns()
+                end_ns = stage_start_ns + duration_ns
+
+                controller = RampingRateController(
+                    stage_start_ns,
+                    duration_ns,
+                    current_rate,
+                    target_rate,
+                    time_unit_ns,
+                )
 
                 while not state.abort_event.is_set():
-                    elapsed = loop.time() - stage_start
-                    if elapsed >= duration_s:
+                    now_ns = time.monotonic_ns()
+                    if now_ns >= end_ns:
                         break
 
-                    progress = elapsed / duration_s if duration_s > 0 else 1.0
-                    rate = current_rate + (target_rate - current_rate) * progress
-                    rate = max(rate, 0.1)
-                    interval = self._time_unit / rate
+                    due, next_deadline_ns = controller.advance(now_ns)
 
-                    target_time = stage_start + accumulated + interval
-                    now = loop.time()
-                    if now < target_time:
-                        await asyncio.sleep(target_time - now)
-                        now = loop.time()
-
-                    while (
-                        not state.abort_event.is_set()
-                        and now >= stage_start + accumulated + interval
-                        and now - stage_start < duration_s
-                    ):
-                        accumulated += interval
+                    for _ in range(due):
+                        if state.abort_event.is_set():
+                            break
                         if sem.locked():
                             state.sample_queue.put(
                                 make_sample(
@@ -105,15 +102,13 @@ class RampingArrivalRateExecutor:
                         else:
                             await sem.acquire()
                             tg.create_task(self._run_iteration(state, sem))
-                        tick += 1
 
-                        elapsed = now - stage_start
-                        if elapsed >= duration_s:
-                            break
-                        progress = elapsed / duration_s if duration_s > 0 else 1.0
-                        rate = current_rate + (target_rate - current_rate) * progress
-                        rate = max(rate, 0.1)
-                        interval = self._time_unit / rate
+                    if next_deadline_ns >= end_ns:
+                        break
+
+                    sleep_s = max(0, (next_deadline_ns - time.monotonic_ns())) / 1_000_000_000
+                    if sleep_s > 0:
+                        await asyncio.sleep(sleep_s)
 
                 current_rate = target_rate
 

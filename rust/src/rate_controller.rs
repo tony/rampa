@@ -86,8 +86,9 @@ impl RampingRateController {
     fn advance(&mut self, now_ns: u64) -> (u64, u64) {
         let elapsed_ns = now_ns.saturating_sub(self.stage_start_ns) as f64;
         let mut due: u64 = 0;
+        let mut interval: f64 = 0.0;
 
-        while self.accumulated_ns <= elapsed_ns {
+        loop {
             let progress = if self.stage_duration_ns > 0.0 {
                 (self.accumulated_ns / self.stage_duration_ns).min(1.0)
             } else {
@@ -95,16 +96,19 @@ impl RampingRateController {
             };
             let rate = self.start_rate + (self.end_rate - self.start_rate) * progress;
             let rate = rate.max(0.1);
-            let interval = self.time_unit_ns / rate;
-            self.accumulated_ns += interval;
+            interval = self.time_unit_ns / rate;
+            let next_deadline = self.accumulated_ns + interval;
 
-            if self.accumulated_ns <= elapsed_ns {
-                due += 1;
-                self.tick += 1;
+            if next_deadline > elapsed_ns {
+                break;
             }
+
+            self.accumulated_ns = next_deadline;
+            due += 1;
+            self.tick += 1;
         }
 
-        let next = self.stage_start_ns + self.accumulated_ns as u64;
+        let next = self.stage_start_ns + (self.accumulated_ns + interval) as u64;
         (due, next)
     }
 

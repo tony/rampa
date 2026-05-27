@@ -157,7 +157,7 @@ class RampingRateController:
         elapsed_ns = float(max(0, now_ns - self._stage_start_ns))
         due = 0
 
-        while self._accumulated_ns <= elapsed_ns:
+        while True:
             progress = (
                 min(self._accumulated_ns / self._stage_duration_ns, 1.0)
                 if self._stage_duration_ns > 0.0
@@ -166,13 +166,16 @@ class RampingRateController:
             rate = self._start_rate + (self._end_rate - self._start_rate) * progress
             rate = max(rate, 0.1)
             interval = self._time_unit_ns / rate
-            self._accumulated_ns += interval
+            next_deadline = self._accumulated_ns + interval
 
-            if self._accumulated_ns <= elapsed_ns:
-                due += 1
-                self._tick += 1
+            if next_deadline > elapsed_ns:
+                break
 
-        next_ns = self._stage_start_ns + int(self._accumulated_ns)
+            self._accumulated_ns = next_deadline
+            due += 1
+            self._tick += 1
+
+        next_ns = self._stage_start_ns + int(self._accumulated_ns + interval)
         return (due, next_ns)
 
     @property
