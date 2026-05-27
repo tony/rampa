@@ -122,6 +122,7 @@ manifest-path = "rust/Cargo.toml"
 module-name = "rampa._core"
 python-source = "src"
 compatibility = "manylinux_2_34"
+include = ["LICENSE"]
 
 [tool.ty.environment]
 python-version = "3.14"
