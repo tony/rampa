@@ -15,6 +15,58 @@ This file provides guidance to AI agents (including Claude Code, Cursor, and oth
 
 rampa is a load testing framework for Python.
 
+## Engineering Policies
+
+### Python First
+
+Python is the default implementation language, public API surface, and user
+experience for this project. Start with clear, typed Python before reaching for
+native code. Native implementation is appropriate only for measured hot paths,
+control/latency-sensitive internals, or platform interfaces that Python cannot
+reasonably handle on its own.
+
+### Strict Typing
+
+Types are part of the design, not cleanup after the fact. Avoid `Any` and
+`object` unless there is no narrower honest type available, such as a true
+trust boundary, intentionally generic callback, or untyped third-party API.
+When `Any` or `object` is unavoidable, keep it local, validate or narrow it as
+soon as possible, and do not let it leak into public APIs or shared internal
+contracts.
+
+### Accelerated Python: Rust Preferred
+
+Accelerators follow a PEP 399-like rule: they must be API-exact accelerators of
+the Python implementation, not separate products. Rust is preferred for new
+accelerators, but C, Cython, C++, and Zig are acceptable when they are the right
+tool for the integration.
+
+Accelerators must compile into Python wheels, import seamlessly through the
+Python package, preserve the same public Python API, and include parity tests
+against the Python behavior. They must also have benchmark coverage that shows
+the performance improvement and makes regressions visible. Downstream bindings
+for other runtimes, such as Node.js or PHP bindings, are not accelerators under
+this policy; they are separate integration surfaces.
+
+### Benchmarking Against Trunk, Tags, and Releases
+
+Performance claims must name the comparison baseline. Use trunk for active
+development comparisons, tags and releases for release-facing claims, major
+versions for schema-breaking benchmark changes, and minor versions for
+non-schema-breaking benchmark changes such as added fields.
+
+High-level benchmark results may be stored in the repository when they are part
+of the supported evidence surface. Keep large traces, dumps, profiler captures,
+and deep-dive notes out of tracked files; put those details in PR comments or
+external artifacts where they can support review without bloating the tree.
+
+### Profiling One Command Away
+
+Profiling must be easy to run when performance or latency work is in scope. A
+developer or agent should be able to profile a test, profile normal runtime
+usage, record profiler output, and inspect the result through documented
+commands or scripts without inventing a workflow from scratch.
+
 ## Development Environment
 
 This project uses:
@@ -571,4 +623,3 @@ to identify which commits this branch actually introduced. Then:
 - **Scope guard:** If cleaning prior slop would touch a colleague's
   work or expand the branch beyond its stated goal, stay in lane:
   protect the current goal and leave prior slop alone.
-
