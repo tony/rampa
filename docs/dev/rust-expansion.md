@@ -20,9 +20,9 @@ class RateController:
 
 try:
     from rampa._core import RateController as RateController
-    _USE_RUST_RATE: bool = True
+    _HAVE_RUST_RATE_CONTROLLER: bool = True
 except ImportError:
-    _USE_RUST_RATE: bool = False
+    _HAVE_RUST_RATE_CONTROLLER: bool = False
 ```
 
 Users always import from the public module (e.g. ``rampa.rate_controller``)
@@ -70,7 +70,7 @@ These follow the PEP 399-like rule with Python-first implementations.
   in Rust. This is an **experimental spike** proving the native boundary
   — it is not yet a PEP 399-compliant accelerator of
   {class}`~rampa.metrics.MetricEngine`. Parity tests exist but it is
-  not wired into production code. The ``_RUST_METRIC_CORE_AVAILABLE``
+  not wired into production code. The ``_HAVE_RUST_METRIC_CORE``
   flag in {mod}`rampa.metrics` indicates availability.
 
 ## Adding a new accelerator

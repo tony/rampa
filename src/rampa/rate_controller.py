@@ -196,6 +196,6 @@ try:
         RateController as RateController,
     )
 
-    _USE_RUST_RATE: bool = True
+    _HAVE_RUST_RATE_CONTROLLER: bool = True
 except ImportError:
-    _USE_RUST_RATE: bool = False  # type: ignore[no-redef]
+    _HAVE_RUST_RATE_CONTROLLER: bool = False  # type: ignore[no-redef]

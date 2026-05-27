@@ -153,5 +153,5 @@ def test_python_implementation_exists() -> None:
 
     assert hasattr(mod, "RateController")
     assert hasattr(mod, "RampingRateController")
-    assert hasattr(mod, "_USE_RUST_RATE")
-    assert isinstance(mod._USE_RUST_RATE, bool)
+    assert hasattr(mod, "_HAVE_RUST_RATE_CONTROLLER")
+    assert isinstance(mod._HAVE_RUST_RATE_CONTROLLER, bool)

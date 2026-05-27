@@ -366,19 +366,19 @@ class HdrTrendSink:
         }
 
 
-_USE_HDR: bool = False
+_HAVE_HDR_HISTOGRAM: bool = False
 try:
     from rampa._core import HdrHistogram as _HdrHistogram  # noqa: F401
 
-    _USE_HDR = True
+    _HAVE_HDR_HISTOGRAM = True
 except ImportError:
     pass
 
-_RUST_METRIC_CORE_AVAILABLE: bool = False
+_HAVE_RUST_METRIC_CORE: bool = False
 try:
     from rampa._core import MetricCore as _MetricCore  # noqa: F401
 
-    _RUST_METRIC_CORE_AVAILABLE = True
+    _HAVE_RUST_METRIC_CORE = True
 except ImportError:
     pass
 
@@ -412,7 +412,7 @@ def create_sink(metric_type: MetricType) -> Sink:
         case MetricType.RATE:
             return RateSink()
         case MetricType.TREND:
-            if _USE_HDR:
+            if _HAVE_HDR_HISTOGRAM:
                 return HdrTrendSink()  # type: ignore[return-value]
             return TrendSink()
 
