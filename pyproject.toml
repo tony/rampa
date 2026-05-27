@@ -121,6 +121,7 @@ sphinx-ux-badges = false
 manifest-path = "rust/Cargo.toml"
 module-name = "rampa._core"
 python-source = "src"
+compatibility = "manylinux_2_34"
 
 [tool.ty.environment]
 python-version = "3.14"
