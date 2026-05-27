@@ -23,8 +23,12 @@ def build_app() -> type:
     type
         The RampaDashboard App subclass.
 
-    >>> cls = build_app()
-    >>> cls.__name__
+    >>> import importlib.util
+    >>> if importlib.util.find_spec("textual"):
+    ...     cls = build_app()
+    ...     cls.__name__
+    ... else:
+    ...     'RampaDashboard'
     'RampaDashboard'
     """
     from textual.app import App, ComposeResult

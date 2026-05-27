@@ -1408,6 +1408,7 @@ tui = [
 dev = [
     { name = "fastmcp" },
     { name = "gp-sphinx" },
+    { name = "grpcio" },
     { name = "maturin" },
     { name = "pytest" },
     { name = "pytest-rerunfailures" },
@@ -1418,6 +1419,7 @@ dev = [
     { name = "sphinx-autodoc-argparse" },
     { name = "sphinx-autodoc-fastmcp" },
     { name = "sphinx-autodoc-pytest-fixtures" },
+    { name = "textual" },
     { name = "tomlkit" },
     { name = "ty" },
 ]
@@ -1445,6 +1447,7 @@ provides-extras = ["mcp", "tui", "grpc"]
 dev = [
     { name = "fastmcp", specifier = ">=2.0" },
     { name = "gp-sphinx", specifier = "==0.0.1a26" },
+    { name = "grpcio", specifier = ">=1.70" },
     { name = "maturin", specifier = ">=1.0,<2.0" },
     { name = "pytest" },
     { name = "pytest-rerunfailures" },
@@ -1455,6 +1458,7 @@ dev = [
     { name = "sphinx-autodoc-argparse", specifier = "==0.0.1a26" },
     { name = "sphinx-autodoc-fastmcp", specifier = "==0.0.1a26" },
     { name = "sphinx-autodoc-pytest-fixtures", specifier = "==0.0.1a26" },
+    { name = "textual", specifier = ">=3.0" },
     { name = "tomlkit", specifier = ">=0.13" },
     { name = "ty", specifier = ">=0.0.35" },
 ]
