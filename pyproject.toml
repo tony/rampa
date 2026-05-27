@@ -1,6 +1,6 @@
 [project]
 name = "rampa"
-version = "0.0.1a0"
+version = "0.0.1a1.dev0"
 description = "Load testing framework"
 requires-python = ">=3.14,<4.0"
 authors = [
@@ -40,6 +40,8 @@ dependencies = [
 
 [project.optional-dependencies]
 mcp = ["fastmcp>=2.0"]
+tui = ["textual>=3.0"]
+grpc = ["grpcio>=1.70"]
 
 [project.scripts]
 rampa = "rampa.cli:main"
@@ -66,9 +68,13 @@ dev = [
   "pytest",
   "pytest-rerunfailures",
   "pytest-watcher",
+  # Build (Rust extension)
+  "maturin>=1.0,<2.0",
   # Scripts
   "tomlkit>=0.13",
-  # Lint / typecheck
+  # Lint / typecheck (extras needed for ty resolution)
+  "textual>=3.0",
+  "grpcio>=1.70",
   "ruff",
   "ty>=0.0.35",
 ]
@@ -83,8 +89,15 @@ docs = [
 ]
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[tool.uv]
+cache-keys = [
+  {file = "pyproject.toml"},
+  {file = "rust/Cargo.toml"},
+  {file = "rust/src/**/*.rs"},
+]
 
 [tool.uv.exclude-newer-package]
 gp-furo-theme = false
@@ -103,6 +116,13 @@ sphinx-gp-sitemap = false
 sphinx-gp-theme = false
 sphinx-ux-autodoc-layout = false
 sphinx-ux-badges = false
+
+[tool.maturin]
+manifest-path = "rust/Cargo.toml"
+module-name = "rampa._core"
+python-source = "src"
+compatibility = "manylinux_2_34"
+include = ["LICENSE"]
 
 [tool.ty.environment]
 python-version = "3.14"

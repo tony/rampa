@@ -1,0 +1,102 @@
+name: "rampa Benchmark"
+description: "Run rampa load tests, store results, and compare against baseline"
+
+inputs:
+  script:
+    description: "Path to test script"
+    required: true
+  vus:
+    description: "Override VU count"
+    required: false
+  duration:
+    description: "Override duration"
+    required: false
+  thresholds-fail:
+    description: "Fail the step if thresholds breach"
+    default: "true"
+  compare-branch:
+    description: "Branch to compare against"
+    default: "main"
+  comment-on-pr:
+    description: "Post comparison as PR comment"
+    default: "true"
+  artifact-name:
+    description: "Name for result artifact"
+    default: "rampa-results"
+  python-version:
+    description: "Python version to use"
+    default: "3.14"
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install rampa
+      shell: bash
+      run: pip install rampa
+
+    - name: Run load test
+      id: run
+      shell: bash
+      run: |
+        set +e
+        rampa run "${{ inputs.script }}" \
+          ${VUS:+--vus "$VUS"} \
+          ${DURATION:+--duration "$DURATION"} \
+          --out "${{ runner.temp }}/rampa-result.json" \
+          --quiet
+        EXIT_CODE=$?
+        echo "exit-code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
+        if [ "${{ inputs.thresholds-fail }}" = "true" ]; then
+          exit $EXIT_CODE
+        fi
+      env:
+        VUS: ${{ inputs.vus }}
+        DURATION: ${{ inputs.duration }}
+
+    - name: Upload result artifact
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ runner.temp }}/rampa-result.json
+        retention-days: 90
+
+    - name: Download baseline
+      id: baseline
+      if: always()
+      shell: bash
+      run: |
+        gh run download \
+          --name "$ARTIFACT_NAME" \
+          --dir "$BASELINE_DIR" \
+          -R "${{ github.repository }}" 2>/dev/null || true
+      env:
+        GH_TOKEN: ${{ github.token }}
+        ARTIFACT_NAME: ${{ inputs.artifact-name }}
+        BASELINE_DIR: ${{ runner.temp }}/baseline
+
+    - name: Generate step summary
+      if: always()
+      shell: bash
+      run: |
+        BASELINE="$BASELINE_DIR/rampa-result.json"
+        CURRENT="${{ runner.temp }}/rampa-result.json"
+        if [ -f "$BASELINE" ] && [ -f "$CURRENT" ]; then
+          python -m rampa.ci.compare \
+            --baseline "$BASELINE" \
+            --current "$CURRENT" \
+            --format markdown >> "$GITHUB_STEP_SUMMARY"
+        elif [ -f "$CURRENT" ]; then
+          echo "### rampa results (no baseline available)" >> "$GITHUB_STEP_SUMMARY"
+          python -m rampa.ci.compare \
+            --baseline "$CURRENT" \
+            --current "$CURRENT" \
+            --format markdown >> "$GITHUB_STEP_SUMMARY"
+        fi
+      env:
+        BASELINE_DIR: ${{ runner.temp }}/baseline

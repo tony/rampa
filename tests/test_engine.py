@@ -187,6 +187,113 @@ def test_events_emit_phases() -> None:
     assert "complete" in phases
 
 
+def test_pause_and_resume() -> None:
+    """Pausing blocks new iterations; resuming lets them continue."""
+    iteration_times: list[float] = []
+
+    async def _track(w: object) -> None:
+        import time
+
+        iteration_times.append(time.monotonic())
+        await asyncio.sleep(0.005)
+
+    async def _run() -> None:
+        plan = _make_plan(_track, duration_ms=500)
+        controller = await Engine(plan).start()
+
+        await asyncio.sleep(0.05)
+        pre_pause_count = len(iteration_times)
+        assert pre_pause_count > 0
+
+        controller.pause()
+        assert controller.is_paused
+
+        await asyncio.sleep(0.1)
+        paused_count = len(iteration_times)
+        assert paused_count - pre_pause_count <= 1
+
+        controller.resume()
+        assert not controller.is_paused
+
+        await asyncio.sleep(0.05)
+        post_resume_count = len(iteration_times)
+        assert post_resume_count > paused_count
+
+        await controller.stop()
+        await controller.wait()
+
+    asyncio.run(_run())
+
+
+def test_pause_events_emitted() -> None:
+    """PauseEvent and ResumeEvent are emitted on the EventBus."""
+    from rampa.events import PauseEvent, ResumeEvent
+
+    async def _noop(w: object) -> None:
+        await asyncio.sleep(0.005)
+
+    async def _run() -> list[type]:
+        plan = _make_plan(_noop, duration_ms=500)
+        controller = await Engine(plan).start()
+
+        event_types: list[type] = []
+
+        async def _collect() -> None:
+            async for event in controller.events():
+                event_types.append(type(event))  # noqa: PERF401
+
+        collect_task = asyncio.create_task(_collect())
+
+        await asyncio.sleep(0.03)
+        controller.pause()
+        await asyncio.sleep(0.03)
+        controller.resume()
+        await asyncio.sleep(0.03)
+        await controller.stop()
+        await controller.wait()
+        await collect_task
+        return event_types
+
+    event_types = asyncio.run(_run())
+    assert PauseEvent in event_types
+    assert ResumeEvent in event_types
+
+
+def test_live_threshold_events_emitted() -> None:
+    """LiveThresholdEvent is emitted during execution when thresholds exist."""
+    from rampa.engine import EngineOptions
+    from rampa.events import LiveThresholdEvent
+
+    async def _slow(w: object) -> None:
+        await asyncio.sleep(0.01)
+
+    async def _run() -> bool:
+        plan = _make_plan(
+            _slow,
+            duration_ms=500,
+            thresholds={"iteration_duration": ["avg<10000"]},
+        )
+        controller = await Engine(
+            plan,
+            EngineOptions(metric_flush_interval=0.05),
+        ).start()
+
+        found_live = False
+
+        async def _collect() -> None:
+            nonlocal found_live
+            async for event in controller.events():
+                if isinstance(event, LiveThresholdEvent):
+                    found_live = True
+
+        collect_task = asyncio.create_task(_collect())
+        await controller.wait()
+        await collect_task
+        return found_live
+
+    assert asyncio.run(_run())
+
+
 def test_snapshot_events_emitted() -> None:
     """SnapshotEvent is emitted via the EventBus from MetricEngine."""
 

@@ -209,6 +209,50 @@ async def list_runs_impl() -> list[dict[str, str]]:
     ]
 
 
+async def pause_run_impl(run_id: str) -> dict[str, str]:
+    """Pause a running test. Idempotent.
+
+    Parameters
+    ----------
+    run_id : str
+        The run identifier.
+
+    Returns
+    -------
+    dict[str, str]
+        Status update.
+    """
+    record = _registry.get(run_id)
+    if record is None:
+        return {"error": f"run {run_id!r} not found"}
+    if record.runtime is None:
+        return {"run_id": run_id, "status": "already_completed"}
+    record.runtime.controller.pause()
+    return {"run_id": run_id, "status": "paused"}
+
+
+async def resume_run_impl(run_id: str) -> dict[str, str]:
+    """Resume a paused test. Idempotent.
+
+    Parameters
+    ----------
+    run_id : str
+        The run identifier.
+
+    Returns
+    -------
+    dict[str, str]
+        Status update.
+    """
+    record = _registry.get(run_id)
+    if record is None:
+        return {"error": f"run {run_id!r} not found"}
+    if record.runtime is None:
+        return {"run_id": run_id, "status": "already_completed"}
+    record.runtime.controller.resume()
+    return {"run_id": run_id, "status": "resumed"}
+
+
 def register(mcp: FastMCP) -> None:
     """Register run lifecycle tools on the MCP server."""
     mcp.tool(
@@ -220,6 +264,16 @@ def register(mcp: FastMCP) -> None:
         name="stop_run",
         description="Stop a running load test. Idempotent.",
     )(stop_run_impl)
+
+    mcp.tool(
+        name="pause_run",
+        description="Pause a running load test. Executors block before next iteration.",
+    )(pause_run_impl)
+
+    mcp.tool(
+        name="resume_run",
+        description="Resume a paused load test.",
+    )(resume_run_impl)
 
     mcp.tool(
         name="get_status",

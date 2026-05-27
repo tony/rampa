@@ -10,6 +10,7 @@ The metric engine runs in a dedicated thread, draining samples from a
 from __future__ import annotations
 
 import collections
+import logging
 import math
 import queue
 import threading
@@ -18,6 +19,8 @@ import typing as t
 from dataclasses import dataclass, field
 
 from rampa._types import MetricType, Sample, ValueType
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -295,8 +298,88 @@ Sink = SinkProtocol
 """Type alias for metric sink implementations."""
 
 
+class HdrTrendSink:
+    """Trend sink backed by a Rust HDR histogram.
+
+    Fixed ~20KB memory regardless of sample count. O(1) insert, O(1)
+    percentile queries. Requires the ``rampa._core`` Rust extension.
+
+    Values are stored as integer microseconds internally. The ``add()``
+    method accepts float milliseconds (matching the Python TrendSink
+    interface) and converts automatically.
+
+    >>> try:
+    ...     from rampa._core import HdrHistogram
+    ...     s = HdrTrendSink()
+    ...     for v in [10.0, 20.0, 30.0, 40.0, 50.0]:
+    ...         s.add(v)
+    ...     fmt = s.format(1.0)
+    ...     fmt["count"]
+    ... except ImportError:
+    ...     5.0
+    5.0
+    """
+
+    def __init__(self) -> None:
+        from rampa._core import HdrHistogram
+
+        self._hdr = HdrHistogram(3)
+
+    def add(self, value: float) -> None:
+        """Record a trend observation (value in milliseconds)."""
+        self._hdr.record(max(0, int(value * 1000)))
+
+    def format(self, duration: float) -> dict[str, float]:
+        """Return aggregated values.
+
+        Parameters
+        ----------
+        duration : float
+            Elapsed test duration in seconds (unused for trend).
+
+        Returns
+        -------
+        dict[str, float]
+            Aggregation with stat keys, values converted back to ms.
+        """
+        count, avg, mn, mx, med, p90, p95, p99 = self._hdr.format_stats()
+        if count == 0:
+            return {
+                "count": 0.0,
+                "avg": 0.0,
+                "min": 0.0,
+                "max": 0.0,
+                "med": 0.0,
+                "p(90)": 0.0,
+                "p(95)": 0.0,
+                "p(99)": 0.0,
+            }
+        return {
+            "count": float(count),
+            "avg": avg / 1000.0,
+            "min": mn / 1000.0,
+            "max": mx / 1000.0,
+            "med": med / 1000.0,
+            "p(90)": p90 / 1000.0,
+            "p(95)": p95 / 1000.0,
+            "p(99)": p99 / 1000.0,
+        }
+
+
+_USE_HDR: bool = False
+try:
+    from rampa._core import HdrHistogram as _HdrHistogram  # noqa: F401
+
+    _USE_HDR = True
+except ImportError:
+    pass
+
+
 def create_sink(metric_type: MetricType) -> Sink:
     """Create a sink matching the metric type.
+
+    Uses Rust HDR histogram for trend sinks when available,
+    falling back to the Python TrendSink.
 
     Parameters
     ----------
@@ -310,8 +393,8 @@ def create_sink(metric_type: MetricType) -> Sink:
 
     >>> type(create_sink(MetricType.COUNTER)).__name__
     'CounterSink'
-    >>> type(create_sink(MetricType.TREND)).__name__
-    'TrendSink'
+    >>> type(create_sink(MetricType.TREND)).__name__ in ('TrendSink', 'HdrTrendSink')
+    True
     """
     match metric_type:
         case MetricType.COUNTER:
@@ -321,7 +404,17 @@ def create_sink(metric_type: MetricType) -> Sink:
         case MetricType.RATE:
             return RateSink()
         case MetricType.TREND:
+            if _USE_HDR:
+                return HdrTrendSink()  # type: ignore[return-value]
             return TrendSink()
+
+
+SubmetricKey = tuple[str, frozenset[tuple[str, str]]]
+"""Identifies a tag-filtered view of a base metric.
+
+The first element is the base metric name, the second is a frozen
+set of (tag_key, tag_value) pairs used for matching.
+"""
 
 
 class MetricRegistry:
@@ -337,6 +430,7 @@ class MetricRegistry:
     def __init__(self) -> None:
         self._metrics: dict[str, Metric] = {}
         self._sinks: dict[str, Sink] = {}
+        self._sub_sinks: dict[SubmetricKey, Sink] = {}
         self._lock = threading.Lock()
 
     def get_or_create(
@@ -396,9 +490,52 @@ class MetricRegistry:
             return dict(self._metrics)
 
     def all_sinks(self) -> dict[str, Sink]:
-        """Return a snapshot of all sinks."""
+        """Return a snapshot of all base sinks."""
         with self._lock:
             return dict(self._sinks)
+
+    def get_or_create_sub_sink(
+        self,
+        base_name: str,
+        tag_filter: dict[str, str],
+    ) -> Sink | None:
+        """Get or create a sub-sink for tag-filtered threshold evaluation.
+
+        Parameters
+        ----------
+        base_name : str
+            Base metric name.
+        tag_filter : dict[str, str]
+            Tags that samples must match to feed this sub-sink.
+
+        Returns
+        -------
+        Sink | None
+            The sub-sink, or None if the base metric is not registered.
+
+        >>> reg = MetricRegistry()
+        >>> _ = reg.get_or_create("dur", MetricType.TREND)
+        >>> sink = reg.get_or_create_sub_sink("dur", {"status": "200"})
+        >>> type(sink).__name__ in ('TrendSink', 'HdrTrendSink')
+        True
+        """
+        with self._lock:
+            metric = self._metrics.get(base_name)
+            if metric is None:
+                return None
+            key: SubmetricKey = (base_name, frozenset(tag_filter.items()))
+            if key not in self._sub_sinks:
+                self._sub_sinks[key] = create_sink(metric.metric_type)
+            return self._sub_sinks[key]
+
+    def get_sub_sink(self, key: SubmetricKey) -> Sink | None:
+        """Return a sub-sink by key, or None if not registered."""
+        return self._sub_sinks.get(key)
+
+    def all_sub_sinks(self) -> dict[SubmetricKey, Sink]:
+        """Return a snapshot of all sub-sinks."""
+        with self._lock:
+            return dict(self._sub_sinks)
 
 
 @dataclass(frozen=True)
@@ -437,6 +574,18 @@ _BUILTIN_METRICS: list[tuple[str, MetricType, ValueType]] = [
     ("http_req_sending", MetricType.TREND, ValueType.TIME),
     ("http_req_waiting", MetricType.TREND, ValueType.TIME),
     ("http_req_receiving", MetricType.TREND, ValueType.TIME),
+    ("ws_sessions", MetricType.COUNTER, ValueType.DEFAULT),
+    ("ws_connecting", MetricType.TREND, ValueType.TIME),
+    ("ws_session_duration", MetricType.TREND, ValueType.TIME),
+    ("ws_messages_sent", MetricType.COUNTER, ValueType.DEFAULT),
+    ("ws_messages_received", MetricType.COUNTER, ValueType.DEFAULT),
+    ("ws_errors", MetricType.COUNTER, ValueType.DEFAULT),
+    ("grpc_reqs", MetricType.COUNTER, ValueType.DEFAULT),
+    ("grpc_req_duration", MetricType.TREND, ValueType.TIME),
+    ("grpc_req_failed", MetricType.RATE, ValueType.DEFAULT),
+    ("grpc_streams_opened", MetricType.COUNTER, ValueType.DEFAULT),
+    ("grpc_messages_sent", MetricType.COUNTER, ValueType.DEFAULT),
+    ("grpc_messages_received", MetricType.COUNTER, ValueType.DEFAULT),
 ]
 
 
@@ -487,9 +636,23 @@ class MetricEngine:
     flush_interval: float = 0.05
     on_sample: t.Callable[[Sample], None] | None = None
     on_snapshot: t.Callable[[MetricSnapshot], None] | None = None
+    thresholds: dict[str, list[t.Any]] = field(default_factory=dict)
+    threshold_interval: float = 2.0
+    on_threshold: t.Callable[[list[t.Any]], None] | None = None
+    abort_callback: t.Callable[[], None] | None = None
     _thread: threading.Thread = field(init=False, repr=False)
     _running: bool = field(init=False, default=False, repr=False)
     _start_time: float = field(init=False, default=0.0, repr=False)
+    _last_threshold_check: float = field(
+        init=False,
+        default=0.0,
+        repr=False,
+    )
+    _grace_deadlines: dict[str, float] = field(
+        init=False,
+        default_factory=dict,
+        repr=False,
+    )
     _snapshots: collections.deque[MetricSnapshot] = field(
         init=False,
         repr=False,
@@ -497,6 +660,12 @@ class MetricEngine:
     _snapshot_lock: threading.Lock = field(
         init=False,
         default_factory=threading.Lock,
+        repr=False,
+    )
+
+    _cached_sub_sinks: dict[t.Any, t.Any] = field(
+        init=False,
+        default_factory=dict,
         repr=False,
     )
 
@@ -513,6 +682,7 @@ class MetricEngine:
         """Start the background aggregation thread."""
         self._running = True
         self._start_time = time.monotonic()
+        self._cached_sub_sinks = self.registry.all_sub_sinks()
         self._thread.start()
 
     def stop(self) -> None:
@@ -536,23 +706,41 @@ class MetricEngine:
 
             if sample is not None:
                 self._ingest(sample)
+                self._drain_available()
 
             now = time.monotonic()
             if now - last_flush >= self.flush_interval:
                 self._emit_snapshot()
                 last_flush = now
 
-        self._drain_remaining()
+        self._drain_available(limit=None)
         self._emit_snapshot()
 
-    def _drain_remaining(self) -> None:
-        while True:
+    def _drain_available(self, limit: int | None = 10_000) -> int:
+        """Drain available samples without blocking.
+
+        Parameters
+        ----------
+        limit : int | None
+            Maximum samples to drain per call. ``None`` drains until
+            the queue is empty (used during shutdown).
+
+        Returns
+        -------
+        int
+            Number of samples ingested.
+        """
+        count = 0
+        while limit is None or count < limit:
             try:
                 sample = self.sample_queue.get_nowait()
             except queue.Empty:
                 break
-            if sample is not None:
-                self._ingest(sample)
+            if sample is None:
+                break
+            self._ingest(sample)
+            count += 1
+        return count
 
     def _ingest(self, sample: Sample) -> None:
         if self.on_sample is not None:
@@ -567,8 +755,16 @@ class MetricEngine:
         if sink is not None:
             sink.add(sample.value)
 
+        for key, sub_sink in self._cached_sub_sinks.items():
+            base_name, tag_set = key
+            if base_name != sample.metric:
+                continue
+            if all(sample.tags.get(k) == v for k, v in tag_set):
+                sub_sink.add(sample.value)
+
     def _emit_snapshot(self) -> None:
         elapsed = time.monotonic() - self._start_time
+        self._cached_sub_sinks = self.registry.all_sub_sinks()
         sinks = self.registry.all_sinks()
         values: dict[str, dict[str, float]] = {}
         for name, sink in sinks.items():
@@ -582,3 +778,59 @@ class MetricEngine:
             self._snapshots.append(snapshot)
         if self.on_snapshot is not None:
             self.on_snapshot(snapshot)
+
+        now = time.monotonic()
+        if self.thresholds and now - self._last_threshold_check >= self.threshold_interval:
+            self._last_threshold_check = now
+            self._check_thresholds(snapshot, elapsed)
+
+    def _check_thresholds(
+        self,
+        snapshot: MetricSnapshot,
+        elapsed: float,
+    ) -> None:
+        from rampa.thresholds import evaluate_thresholds
+
+        results = evaluate_thresholds(
+            self.thresholds,
+            self.registry.all_sinks(),
+            elapsed,
+            sub_sinks=self.registry.all_sub_sinks(),
+        )
+
+        if self.on_threshold is not None:
+            self.on_threshold(results)
+
+        for result in results:
+            if result.passed:
+                self._grace_deadlines.pop(result.source, None)
+                continue
+
+            threshold = self._find_threshold(result.source)
+            if threshold is None or not threshold.abort_on_fail:
+                continue
+
+            now = time.monotonic()
+            if threshold.grace_period is not None and threshold.grace_period > 0:
+                if result.source not in self._grace_deadlines:
+                    self._grace_deadlines[result.source] = now + threshold.grace_period
+                    continue
+                if now < self._grace_deadlines[result.source]:
+                    continue
+
+            if self.abort_callback is not None:
+                logger.warning(
+                    "threshold abort: %s",
+                    result.source,
+                )
+                self.abort_callback()
+                return
+
+    def _find_threshold(self, source: str) -> t.Any | None:
+        if self.thresholds is None:
+            return None
+        for thresholds in self.thresholds.values():
+            for threshold in thresholds:
+                if threshold.source == source:
+                    return threshold
+        return None

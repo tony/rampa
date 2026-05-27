@@ -65,6 +65,28 @@ class PhaseEvent(EngineEvent):
 
 
 @dataclass(frozen=True)
+class PauseEvent(EngineEvent):
+    """Emitted when execution is paused.
+
+    >>> e = PauseEvent(run_id="x", timestamp_ns=0)
+    >>> e.run_id
+    'x'
+    """
+
+
+@dataclass(frozen=True)
+class ResumeEvent(EngineEvent):
+    """Emitted when execution resumes after a pause.
+
+    >>> e = ResumeEvent(run_id="x", timestamp_ns=0, paused_seconds=1.5)
+    >>> e.paused_seconds
+    1.5
+    """
+
+    paused_seconds: float
+
+
+@dataclass(frozen=True)
 class SnapshotEvent(EngineEvent):
     """Periodic metric snapshot.
 
@@ -88,6 +110,23 @@ class ThresholdEvent(EngineEvent):
     """
 
     results: list[ThresholdResult]
+
+
+@dataclass(frozen=True)
+class LiveThresholdEvent(EngineEvent):
+    """Mid-run threshold evaluation result.
+
+    Emitted periodically during execution by the MetricEngine.
+
+    >>> e = LiveThresholdEvent(
+    ...     run_id="x", timestamp_ns=0, results=[], will_abort=False,
+    ... )
+    >>> e.will_abort
+    False
+    """
+
+    results: list[ThresholdResult]
+    will_abort: bool = False
 
 
 @dataclass(frozen=True)

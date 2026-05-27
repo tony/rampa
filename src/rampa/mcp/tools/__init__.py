@@ -30,3 +30,7 @@ def register(mcp: FastMCP) -> None:
     from rampa.mcp.tools.thresholds import register as register_thresholds
 
     register_thresholds(mcp)
+
+    from rampa.mcp.tools.discovery import register as register_discovery
+
+    register_discovery(mcp)

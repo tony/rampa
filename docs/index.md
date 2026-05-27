@@ -107,12 +107,15 @@ config = rampa.Config(
 
 Threshold breaches produce exit code 1 for CI integration.
 
-### Four frontends
+### Multiple frontends and outputs
 
-- **CLI** — `rampa run` for terminal use
+- **CLI** — `rampa run` with `--progress` live status or `--tui` dashboard
+- **TUI** — interactive Textual dashboard with live metrics and keyboard control
 - **pytest plugin** — `@pytest.mark.rampa_scenario` for test suites
+- **unittest mixin** — `RampaTestCase` for unittest integration
 - **MCP server** — `rampa-mcp` for AI agent integration
-- **JSON / JSONL** — `--out` and `--event-log` for structured output
+- **Output backends** — CSV, InfluxDB, Prometheus, OTEL, webhooks via `--output`
+- **CI comparison** — `python -m rampa.ci.compare` for benchmark diffs
 
 ```{toctree}
 :hidden:

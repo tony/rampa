@@ -2,11 +2,80 @@
 
 <!-- To maintainers and contributors: Please add notes for the forthcoming version below -->
 
-## rampa 0.0.x (Yet to be released)
+## rampa 0.0.1a1 (unreleased)
 
-<!-- KEEP THIS PLACEHOLDER - DO NOT REMOVE OR MODIFY THIS LINE -->
-_Notes on the upcoming release will go here._
-<!-- END PLACEHOLDER - ADD NEW CHANGELOG ENTRIES BELOW THIS LINE -->
+rampa 0.0.1a1 ships pluggable output backends, protocol clients for
+WebSocket and gRPC, distributed execution primitives, a Textual-based
+TUI dashboard, and a Rust-backed HDR histogram for O(1) metric
+aggregation. The engine gains mid-run pause/resume, live threshold
+evaluation with grace-period abort, and graceful signal handling.
+
+### What's new
+
+#### Output backend ecosystem
+
+Eight output backends — console, JSON, CSV, InfluxDB, webhook,
+Prometheus remote-write, OpenTelemetry OTLP, and GitHub Actions
+annotations — plugged in via `--output backend=destination`. Multiple
+backends run simultaneously in a single test. (#4)
+
+#### WebSocket and gRPC protocol clients
+
+`worker.ws` and `worker.grpc` lazy properties give scenarios access to
+WebSocket sessions and gRPC unary/streaming calls with automatic metric
+emission matching k6's `ws_*` and `grpc_*` vocabulary. (#4)
+
+#### Distributed execution primitives
+
+Deterministic work partitioning via {class}`ExecutionSegment`,
+self-contained `.rampa` archive bundles for shipping tests to remote
+workers, and a coordinator/worker wire protocol with JSON and MessagePack
+encoding. (#4)
+
+#### TUI dashboard
+
+Textual-based live dashboard showing VU counts, iteration rate, HTTP
+timing percentiles, and threshold status. Progressive display hierarchy:
+console summary (default), `--progress` single-line, `--tui` full
+dashboard. (#4)
+
+#### Rust HDR histogram
+
+PyO3-wrapped `hdrhistogram` crate replaces the Python list-based
+TrendSink. Fixed ~20 KB memory and O(1) percentile queries regardless of
+sample count, with automatic fallback to the Python implementation when
+the extension is unavailable. (#4)
+
+#### Pause/resume and live thresholds
+
+Mid-run pause/resume via {class}`RunController`, with zero-overhead
+`wait_if_paused()` gate on each iteration. Thresholds evaluate
+periodically during the run with configurable grace periods, emitting
+{class}`LiveThresholdEvent` for real-time dashboard updates. (#4)
+
+#### `rampa inspect` command
+
+Show the fully resolved test configuration — scenarios, thresholds,
+executor defaults — in text or JSON without running the test. (#4)
+
+#### CI integration
+
+{mod}`rampa.ci.compare` compares two JSON result files and produces
+text, markdown, or JSON delta reports. GitHub Actions composite action
+runs a test, uploads the result artifact, and generates a step summary
+with baseline comparison. (#4)
+
+#### MCP discovery and control tools
+
+`discover_scenarios` and `inspect_config` tools let AI agents inspect
+test scripts before running. `pause_run` and `resume_run` enable mid-run
+control from agent workflows. (#4)
+
+#### unittest integration
+
+{class}`RampaTestCase` mixin adds {meth}`run_rampa` to any
+`unittest.TestCase`, accepting a worker function and threshold
+expressions for teams that don't use pytest. (#4)
 
 ### Documentation
 
@@ -17,6 +86,13 @@ auto-generated reference pages with typed parameter tables and safety
 badges. The CLI was migrated from Click to argparse to enable
 `sphinx-autodoc-argparse` directives; help output now includes
 colorized example blocks. (#3)
+
+### Development
+
+#### Build backend switched to maturin
+
+Wheels now include the compiled Rust extension. `maturin develop --uv`
+auto-builds during `pytest` via a conftest.py cold-start hook. (#4)
 
 ## rampa 0.0.1a0 (2026-05-24)
 

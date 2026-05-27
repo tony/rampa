@@ -222,7 +222,9 @@ def test_registry_creates_matching_sinks() -> None:
     reg = MetricRegistry()
     reg.get_or_create("dur", MetricType.TREND)
     sink = reg.get_sink("dur")
-    assert isinstance(sink, TrendSink)
+    assert sink is not None
+    assert hasattr(sink, "add")
+    assert hasattr(sink, "format")
 
 
 def test_register_builtins_populates_registry() -> None:

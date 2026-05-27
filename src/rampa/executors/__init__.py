@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 
 from rampa._types import Sample, make_sample
 from rampa.config import ScenarioConfig
+from rampa.pause import PauseController
 from rampa.worker import ExecutionInfo, Worker
 
 logger = logging.getLogger(__name__)
@@ -59,6 +60,7 @@ class ExecutionState:
     worker_fn: WorkerFn
     scenario: str
     setup_data: t.Any = None
+    pause_controller: PauseController = field(default_factory=PauseController)
     _iteration_counter: int = field(default=0, repr=False)
     _worker_id_counter: int = field(default=0, repr=False)
     _active_vus: int = field(default=0, repr=False)
@@ -172,6 +174,7 @@ async def run_iteration(state: ExecutionState) -> None:
 
     >>> import rampa.executors
     """
+    await state.pause_controller.wait_if_paused()
     worker = state.make_worker()
     start = time.monotonic_ns()
     try:
@@ -192,6 +195,10 @@ async def run_iteration(state: ExecutionState) -> None:
     finally:
         if worker._http is not None:
             await worker._http.close()
+        if worker._ws is not None:
+            await worker._ws.close()
+        if worker._grpc is not None:
+            await worker._grpc.close()
         elapsed_ns = time.monotonic_ns() - start
         state.sample_queue.put(
             make_sample("iterations", 1.0, {"scenario": state.scenario}),
