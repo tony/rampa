@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
 import queue
 import statistics
 import sys
@@ -30,50 +29,7 @@ from rampa._types import Sample
 from rampa.config import ScenarioConfig
 from rampa.executors import ExecutionState
 from rampa.executors.constant_arrival_rate import ConstantArrivalRateExecutor
-
-
-def _parse_env_int(name: str, default: int) -> int:
-    """Parse an integer from an environment variable.
-
-    Parameters
-    ----------
-    name : str
-        Environment variable name.
-    default : int
-        Default value if not set.
-
-    Returns
-    -------
-    int
-        Parsed value.
-
-    >>> os.environ.pop("_TEST_INT", None)
-    >>> _parse_env_int("_TEST_INT", 42)
-    42
-    """
-    return int(os.environ.get(name, str(default)))
-
-
-def _parse_env_float(name: str, default: float) -> float:
-    """Parse a float from an environment variable.
-
-    Parameters
-    ----------
-    name : str
-        Environment variable name.
-    default : float
-        Default value if not set.
-
-    Returns
-    -------
-    float
-        Parsed value.
-
-    >>> os.environ.pop("_TEST_FLOAT", None)
-    >>> _parse_env_float("_TEST_FLOAT", 3.14)
-    3.14
-    """
-    return float(os.environ.get(name, str(default)))
+from scripts._bench_common import build_env_info, parse_env_float, parse_env_int
 
 
 def _percentile(data: list[float], p: float) -> float:
@@ -165,8 +121,21 @@ async def run_benchmark(
     drifts_us = [abs(iv - target_us) for iv in intervals_us]
     drifts_us_sorted = sorted(drifts_us)
 
+    late_threshold_us = target_us * 2.0
+    late_starts = sum(1 for d in drifts_us if d > late_threshold_us)
+
+    dropped_iterations = 0
+    while True:
+        try:
+            s = sq.get_nowait()
+        except queue.Empty:
+            break
+        if s is not None and s.metric == "dropped_iterations":
+            dropped_iterations += int(s.value)
+
     return {
         "benchmark": "scheduler_precision",
+        "env": build_env_info(),
         "config": {
             "rate": rate,
             "duration": duration,
@@ -185,6 +154,9 @@ async def run_benchmark(
             "drift_p90_us": round(_percentile(drifts_us_sorted, 90), 2),
             "drift_p99_us": round(_percentile(drifts_us_sorted, 99), 2),
             "max_drift_us": round(max(drifts_us), 2),
+            "late_starts": late_starts,
+            "late_start_threshold_us": round(late_threshold_us, 2),
+            "dropped_iterations": dropped_iterations,
         },
     }
 
@@ -205,9 +177,9 @@ async def run_benchmark(
 )
 def main(json_flag: bool, ndjson: bool) -> None:
     """Run the scheduler precision benchmark."""
-    rate = _parse_env_float("BENCH_RATE", 1000.0)
-    duration = _parse_env_float("BENCH_DURATION", 2.0)
-    max_vus = _parse_env_int("BENCH_MAX_VUS", 100)
+    rate = parse_env_float("BENCH_RATE", 1000.0)
+    duration = parse_env_float("BENCH_DURATION", 2.0)
+    max_vus = parse_env_int("BENCH_MAX_VUS", 100)
 
     result = asyncio.run(run_benchmark(rate, duration, max_vus))
 
