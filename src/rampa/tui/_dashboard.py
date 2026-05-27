@@ -106,6 +106,7 @@ def build_app() -> type:
             self._plan = plan
             self._result: RunResult | None = None
             self._controller: t.Any = None
+            self._engine_loop: asyncio.AbstractEventLoop | None = None
             self._exit_code = 0
 
         @property
@@ -148,9 +149,11 @@ def build_app() -> type:
         def _run_engine(self) -> None:
             """Worker thread: start engine, drain events via call_from_thread."""
             loop = asyncio.new_event_loop()
+            self._engine_loop = loop
             try:
                 loop.run_until_complete(self._engine_lifecycle())
             finally:
+                self._engine_loop = None
                 loop.close()
 
         async def _engine_lifecycle(self) -> None:
@@ -249,19 +252,19 @@ def build_app() -> type:
 
         def action_toggle_pause(self) -> None:
             """Toggle pause/resume."""
-            if self._controller is None:
+            if self._controller is None or self._engine_loop is None:
                 return
             if self._controller.is_paused:
-                self._controller.resume()
+                self._engine_loop.call_soon_threadsafe(self._controller.resume)
             else:
-                self._controller.pause()
+                self._engine_loop.call_soon_threadsafe(self._controller.pause)
 
         def action_stop_run(self) -> None:
             """Stop the running test."""
-            if self._controller is not None:
+            if self._controller is not None and self._engine_loop is not None:
                 asyncio.run_coroutine_threadsafe(
                     self._controller.stop("user requested via TUI"),
-                    asyncio.get_event_loop(),
+                    self._engine_loop,
                 )
 
     return RampaDashboard
