@@ -663,6 +663,12 @@ class MetricEngine:
         repr=False,
     )
 
+    _cached_sub_sinks: dict[t.Any, t.Any] = field(
+        init=False,
+        default_factory=dict,
+        repr=False,
+    )
+
     def __post_init__(self) -> None:
         """Initialize the background thread and bounded snapshot storage."""
         self._snapshots = collections.deque(maxlen=128)
@@ -676,6 +682,7 @@ class MetricEngine:
         """Start the background aggregation thread."""
         self._running = True
         self._start_time = time.monotonic()
+        self._cached_sub_sinks = self.registry.all_sub_sinks()
         self._thread.start()
 
     def stop(self) -> None:
@@ -748,7 +755,7 @@ class MetricEngine:
         if sink is not None:
             sink.add(sample.value)
 
-        for key, sub_sink in self.registry.all_sub_sinks().items():
+        for key, sub_sink in self._cached_sub_sinks.items():
             base_name, tag_set = key
             if base_name != sample.metric:
                 continue
@@ -757,6 +764,7 @@ class MetricEngine:
 
     def _emit_snapshot(self) -> None:
         elapsed = time.monotonic() - self._start_time
+        self._cached_sub_sinks = self.registry.all_sub_sinks()
         sinks = self.registry.all_sinks()
         values: dict[str, dict[str, float]] = {}
         for name, sink in sinks.items():
