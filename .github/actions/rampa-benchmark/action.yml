@@ -66,13 +66,37 @@ runs:
         path: ${{ runner.temp }}/rampa-result.json
         retention-days: 90
 
+    - name: Download baseline
+      id: baseline
+      if: always()
+      shell: bash
+      run: |
+        gh run download \
+          --name "$ARTIFACT_NAME" \
+          --dir "$BASELINE_DIR" \
+          -R "${{ github.repository }}" 2>/dev/null || true
+      env:
+        GH_TOKEN: ${{ github.token }}
+        ARTIFACT_NAME: ${{ inputs.artifact-name }}
+        BASELINE_DIR: ${{ runner.temp }}/baseline
+
     - name: Generate step summary
       if: always()
       shell: bash
       run: |
-        if [ -f "${{ runner.temp }}/rampa-result.json" ]; then
+        BASELINE="$BASELINE_DIR/rampa-result.json"
+        CURRENT="${{ runner.temp }}/rampa-result.json"
+        if [ -f "$BASELINE" ] && [ -f "$CURRENT" ]; then
           python -m rampa.ci.compare \
-            --baseline "${{ runner.temp }}/rampa-result.json" \
-            --current "${{ runner.temp }}/rampa-result.json" \
+            --baseline "$BASELINE" \
+            --current "$CURRENT" \
+            --format markdown >> "$GITHUB_STEP_SUMMARY"
+        elif [ -f "$CURRENT" ]; then
+          echo "### rampa results (no baseline available)" >> "$GITHUB_STEP_SUMMARY"
+          python -m rampa.ci.compare \
+            --baseline "$CURRENT" \
+            --current "$CURRENT" \
             --format markdown >> "$GITHUB_STEP_SUMMARY"
         fi
+      env:
+        BASELINE_DIR: ${{ runner.temp }}/baseline
