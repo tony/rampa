@@ -40,6 +40,7 @@ def _ensure_native_extension() -> None:
     tty_fd = _tty()
     t0 = time.monotonic()
     _tty_write("\033[1m→ building rampa._core (maturin develop)\033[0m\n", tty_fd)
+    build_ok = False
     try:
         subprocess.check_call(
             [sys.executable, "-m", "maturin", "develop", "--manifest-path", str(manifest), "--uv"],
@@ -58,15 +59,18 @@ def _ensure_native_extension() -> None:
     except FileNotFoundError:
         _tty_write("\033[33m⚠ maturin not installed — using Python fallback\033[0m\n", tty_fd)
     else:
+        build_ok = True
         import importlib
 
         try:
             importlib.import_module("rampa._core")
         except ImportError:
+            build_ok = False
             _tty_write("\033[33m⚠ build succeeded but import failed\033[0m\n", tty_fd)
     finally:
-        elapsed = time.monotonic() - t0
-        _tty_write(f"\033[1m✓ native build ({elapsed:.1f}s)\033[0m\n", tty_fd)
+        if build_ok:
+            elapsed = time.monotonic() - t0
+            _tty_write(f"\033[1m✓ native build ({elapsed:.1f}s)\033[0m\n", tty_fd)
         if tty_fd is not None:
             os.close(tty_fd)
 
