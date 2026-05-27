@@ -98,26 +98,32 @@ class ExecutionSegment:
         end = (self.index + 1) * total_iterations // self.total
         return range(start, end)
 
-    def scale_rate(self, total_rate: float) -> float:
+    def scale_rate(self, total_rate: float, total_vus: int) -> float:
         """Return this segment's share of a total arrival rate.
 
         Parameters
         ----------
         total_rate : float
             Desired total arrival rate (e.g. requests/sec).
+        total_vus : int
+            Total virtual users being partitioned.
 
         Returns
         -------
         float
             This segment's proportional rate.
 
-        >>> ExecutionSegment(0, 4).scale_rate(100.0)
+        >>> ExecutionSegment(0, 4).scale_rate(100.0, 4)
         25.0
-        >>> ExecutionSegment(0, 3).scale_rate(100.0)  # doctest: +ELLIPSIS
+        >>> ExecutionSegment(0, 3).scale_rate(100.0, 3)  # doctest: +ELLIPSIS
         33.3...
+        >>> ExecutionSegment(0, 2).scale_rate(100.0, 5)
+        40.0
+        >>> ExecutionSegment(1, 2).scale_rate(100.0, 5)
+        60.0
         """
-        segment_vus = len(self.vu_range(self.total))
-        return total_rate * segment_vus / self.total
+        segment_vus = len(self.vu_range(total_vus))
+        return total_rate * segment_vus / total_vus
 
     @property
     def fraction(self) -> float:
