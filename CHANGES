@@ -2,7 +2,7 @@
 
 <!-- To maintainers and contributors: Please add notes for the forthcoming version below -->
 
-## rampa 0.0.1a1 (unreleased)
+## rampa 0.0.1a1 (2026-05-27)
 
 rampa 0.0.1a1 ships pluggable output backends, protocol clients for
 WebSocket and gRPC, distributed execution primitives, a Textual-based

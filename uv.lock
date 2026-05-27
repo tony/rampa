@@ -1386,7 +1386,7 @@ wheels = [
 
 [[package]]
 name = "rampa"
-version = "0.0.1a1.dev0"
+version = "0.0.1a1"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
