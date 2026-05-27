@@ -53,6 +53,11 @@ class ConstantArrivalRateExecutor:
     async def run(self, state: ExecutionState) -> None:
         """Schedule iterations at the configured rate.
 
+        Uses absolute monotonic deadlines and batch admission: when the
+        event loop wakes late, all due ticks are processed before the
+        next sleep. Dropped iterations always consume their timeslot to
+        avoid cascading drops.
+
         Parameters
         ----------
         state : ExecutionState
@@ -61,37 +66,43 @@ class ConstantArrivalRateExecutor:
         interval = self._time_unit / self._rate
         loop = asyncio.get_running_loop()
         start = loop.time()
+        end_time = start + self._duration
         sem = asyncio.Semaphore(self._max_vus)
         tick = 0
 
         async with asyncio.TaskGroup() as tg:
             while not state.abort_event.is_set():
                 target_time = start + tick * interval
-                now = loop.time()
-                elapsed = now - start
-
-                if elapsed >= self._duration:
+                if target_time >= end_time:
                     break
 
+                now = loop.time()
                 if now < target_time:
                     await asyncio.sleep(target_time - now)
+                    now = loop.time()
 
-                if sem.locked():
-                    state.sample_queue.put(
-                        make_sample(
-                            "dropped_iterations",
-                            1.0,
-                            {"scenario": state.scenario},
-                        ),
-                    )
-                    await asyncio.sleep(0)
-                else:
-                    await sem.acquire()
-                    tg.create_task(
-                        self._run_iteration(state, sem),
-                    )
+                while (
+                    not state.abort_event.is_set()
+                    and start + tick * interval <= now
+                    and start + tick * interval < end_time
+                ):
+                    if sem.locked():
+                        state.sample_queue.put(
+                            make_sample(
+                                "dropped_iterations",
+                                1.0,
+                                {"scenario": state.scenario},
+                            ),
+                        )
+                    else:
+                        await sem.acquire()
+                        tg.create_task(
+                            self._run_iteration(state, sem),
+                        )
+                    tick += 1
 
-                tick += 1
+                if tick == 0 or now >= end_time:
+                    break
 
     async def _run_iteration(
         self,

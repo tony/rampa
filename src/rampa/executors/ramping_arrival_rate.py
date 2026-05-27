@@ -49,6 +49,10 @@ class RampingArrivalRateExecutor:
     async def run(self, state: ExecutionState) -> None:
         """Execute ramping arrival-rate stages.
 
+        Uses absolute deadlines per stage and batch admission when the
+        event loop wakes late. Dropped iterations always consume their
+        timeslot.
+
         Parameters
         ----------
         state : ExecutionState
@@ -65,34 +69,51 @@ class RampingArrivalRateExecutor:
                 target_rate = float(stage.target)
                 duration_s = stage.duration.total_seconds()
                 stage_start = loop.time()
-                target_time = stage_start
+                tick = 0
+                accumulated = 0.0
 
                 while not state.abort_event.is_set():
                     elapsed = loop.time() - stage_start
                     if elapsed >= duration_s:
                         break
+
                     progress = elapsed / duration_s if duration_s > 0 else 1.0
                     rate = current_rate + (target_rate - current_rate) * progress
                     rate = max(rate, 0.1)
                     interval = self._time_unit / rate
 
-                    target_time += interval
+                    target_time = stage_start + accumulated + interval
                     now = loop.time()
                     if now < target_time:
                         await asyncio.sleep(target_time - now)
+                        now = loop.time()
 
-                    if sem.locked():
-                        state.sample_queue.put(
-                            make_sample(
-                                "dropped_iterations",
-                                1.0,
-                                {"scenario": state.scenario},
-                            ),
-                        )
-                        await asyncio.sleep(0)
-                    else:
-                        await sem.acquire()
-                        tg.create_task(self._run_iteration(state, sem))
+                    while (
+                        not state.abort_event.is_set()
+                        and now >= stage_start + accumulated + interval
+                        and now - stage_start < duration_s
+                    ):
+                        accumulated += interval
+                        if sem.locked():
+                            state.sample_queue.put(
+                                make_sample(
+                                    "dropped_iterations",
+                                    1.0,
+                                    {"scenario": state.scenario},
+                                ),
+                            )
+                        else:
+                            await sem.acquire()
+                            tg.create_task(self._run_iteration(state, sem))
+                        tick += 1
+
+                        elapsed = now - stage_start
+                        if elapsed >= duration_s:
+                            break
+                        progress = elapsed / duration_s if duration_s > 0 else 1.0
+                        rate = current_rate + (target_rate - current_rate) * progress
+                        rate = max(rate, 0.1)
+                        interval = self._time_unit / rate
 
                 current_rate = target_rate
 
