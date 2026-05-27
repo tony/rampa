@@ -68,6 +68,8 @@ dev = [
   "pytest",
   "pytest-rerunfailures",
   "pytest-watcher",
+  # Build (Rust extension)
+  "maturin>=1.0,<2.0",
   # Scripts
   "tomlkit>=0.13",
   # Lint / typecheck

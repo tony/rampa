@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import pathlib
+import shutil
 import subprocess
 import sys
 import time
@@ -33,6 +34,9 @@ def _ensure_native_extension() -> None:
     manifest = _PROJECT_ROOT / "rust" / "Cargo.toml"
     if not manifest.exists():
         return
+    if not shutil.which("cargo"):
+        sys.stderr.write("⚠ cargo not found — skipping Rust build (Python fallback)\n")
+        return
     tty_fd = _tty()
     t0 = time.monotonic()
     _tty_write("\033[1m→ building rampa._core (maturin develop)\033[0m\n", tty_fd)
@@ -49,8 +53,17 @@ def _ensure_native_extension() -> None:
                 "CARGO_TERM_COLOR": "always",
             },
         )
-    except Exception:
+    except subprocess.CalledProcessError:
         _tty_write("\033[33m⚠ Rust build failed — using Python fallback\033[0m\n", tty_fd)
+    except FileNotFoundError:
+        _tty_write("\033[33m⚠ maturin not installed — using Python fallback\033[0m\n", tty_fd)
+    else:
+        import importlib
+
+        try:
+            importlib.import_module("rampa._core")
+        except ImportError:
+            _tty_write("\033[33m⚠ build succeeded but import failed\033[0m\n", tty_fd)
     finally:
         elapsed = time.monotonic() - t0
         _tty_write(f"\033[1m✓ native build ({elapsed:.1f}s)\033[0m\n", tty_fd)
