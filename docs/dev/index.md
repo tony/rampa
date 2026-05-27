@@ -74,6 +74,12 @@ future Rust/PyO3 seam.
 Throughput, scheduling, metric engine, and HTTP benchmarks.
 :::
 
+:::{grid-item-card} Rust expansion
+:link: rust-expansion
+:link-type: doc
+Optional Rust acceleration via PyO3 — architecture, components, fallback.
+:::
+
 :::{grid-item-card} ADRs
 :link: ../adrs/index
 :link-type: doc
@@ -86,5 +92,6 @@ Architecture decision records — significant design choices and rationale.
 :hidden:
 
 benchmark
+rust-expansion
 ../adrs/index
 ```
