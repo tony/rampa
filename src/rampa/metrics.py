@@ -374,6 +374,14 @@ try:
 except ImportError:
     pass
 
+_USE_RUST_ENGINE: bool = False
+try:
+    from rampa._core import MetricCore as _MetricCore  # noqa: F401
+
+    _USE_RUST_ENGINE = True
+except ImportError:
+    pass
+
 
 def create_sink(metric_type: MetricType) -> Sink:
     """Create a sink matching the metric type.
