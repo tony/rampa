@@ -33,11 +33,13 @@ impl RateController {
     }
 
     /// Return the current tick count.
+    #[getter]
     fn tick(&self) -> u64 {
         self.tick
     }
 
     /// Return the configured interval in nanoseconds.
+    #[getter]
     fn interval_ns(&self) -> u64 {
         self.interval_ns
     }
@@ -107,6 +109,7 @@ impl RampingRateController {
     }
 
     /// Return the current tick count.
+    #[getter]
     fn tick(&self) -> u64 {
         self.tick
     }

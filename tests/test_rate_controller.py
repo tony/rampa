@@ -1,7 +1,8 @@
-"""Tests for the Rust rate controller experiment.
+"""Tests for rate controllers (Python and optional Rust accelerator).
 
-Compares Rust deadline calculations against Python arithmetic to verify
-parity. All tests skip if the Rust extension is not available.
+Imports from ``rampa.rate_controller`` which provides Python-first
+implementations, optionally accelerated by Rust. Tests must pass
+without the Rust extension.
 """
 
 from __future__ import annotations
@@ -10,9 +11,7 @@ import typing as t
 
 import pytest
 
-_core = pytest.importorskip("rampa._core")
-RateController = _core.RateController
-RampingRateController = _core.RampingRateController
+from rampa.rate_controller import RampingRateController, RateController
 
 
 class RateFixture(t.NamedTuple):
@@ -95,12 +94,12 @@ def test_rate_controller_tick_monotonic() -> None:
     prev_tick = 0
     for now in range(0, 10_000_000, 350_000):
         rc.advance(now)
-        assert rc.tick() >= prev_tick
-        prev_tick = rc.tick()
+        assert rc.tick >= prev_tick
+        prev_tick = rc.tick
 
 
-def test_rate_controller_parity_with_python() -> None:
-    """Rust and Python deadline arithmetic agree for 500 test points."""
+def test_rate_controller_parity_with_arithmetic() -> None:
+    """Rate controller matches pure integer deadline arithmetic."""
     start_ns = 1_000_000_000
     interval_ns = 2_000_000
 
@@ -116,24 +115,18 @@ def test_rate_controller_parity_with_python() -> None:
         py_due = py_target_tick - py_tick
         py_tick = py_target_tick
 
-        assert due == py_due, f"step {step}: rust={due}, python={py_due}"
+        assert due == py_due, f"step {step}: got={due}, expected={py_due}"
+
+
+def test_rate_controller_interval_ns_property() -> None:
+    """RateController.interval_ns returns configured value."""
+    rc = RateController(0, 42_000)
+    assert rc.interval_ns == 42_000
 
 
 def test_ramping_rate_controller_basic() -> None:
     """RampingRateController produces iterations during a ramp."""
-    stage_start = 0
-    stage_duration = 1_000_000_000
-    start_rate = 10.0
-    end_rate = 100.0
-    time_unit = 1_000_000_000.0
-
-    rc = RampingRateController(
-        stage_start,
-        stage_duration,
-        start_rate,
-        end_rate,
-        time_unit,
-    )
+    rc = RampingRateController(0, 1_000_000_000, 10.0, 100.0, 1_000_000_000.0)
     total_due = 0
     for t_ms in range(0, 1000, 50):
         now = t_ms * 1_000_000
@@ -141,7 +134,7 @@ def test_ramping_rate_controller_basic() -> None:
         total_due += due
 
     assert total_due > 0
-    assert rc.tick() > 0
+    assert rc.tick > 0
 
 
 def test_ramping_rate_controller_tick_monotonic() -> None:
@@ -150,5 +143,15 @@ def test_ramping_rate_controller_tick_monotonic() -> None:
     prev = 0
     for t_ms in range(0, 1000, 10):
         rc.advance(t_ms * 1_000_000)
-        assert rc.tick() >= prev
-        prev = rc.tick()
+        assert rc.tick >= prev
+        prev = rc.tick
+
+
+def test_python_implementation_exists() -> None:
+    """Python RateController is importable even without Rust."""
+    import rampa.rate_controller as mod
+
+    assert hasattr(mod, "RateController")
+    assert hasattr(mod, "RampingRateController")
+    assert hasattr(mod, "_USE_RUST_RATE")
+    assert isinstance(mod._USE_RUST_RATE, bool)

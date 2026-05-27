@@ -10,10 +10,12 @@ silently reducing the request rate.
 from __future__ import annotations
 
 import asyncio
+import time
 
 from rampa._types import make_sample
 from rampa.config import ScenarioConfig
 from rampa.executors import ExecutionState, register_executor, run_iteration
+from rampa.rate_controller import RateController
 
 
 class ConstantArrivalRateExecutor:
@@ -53,39 +55,34 @@ class ConstantArrivalRateExecutor:
     async def run(self, state: ExecutionState) -> None:
         """Schedule iterations at the configured rate.
 
-        Uses absolute monotonic deadlines and batch admission: when the
-        event loop wakes late, all due ticks are processed before the
-        next sleep. Dropped iterations always consume their timeslot to
-        avoid cascading drops.
+        Delegates deadline arithmetic to a ``RateController`` (Python or
+        Rust). Batch-admits all due ticks per wake cycle. Dropped
+        iterations consume their timeslot to avoid cascading drops.
 
         Parameters
         ----------
         state : ExecutionState
             Shared execution state.
         """
-        interval = self._time_unit / self._rate
-        loop = asyncio.get_running_loop()
-        start = loop.time()
-        end_time = start + self._duration
+        interval_s = self._time_unit / self._rate
+        interval_ns = int(interval_s * 1_000_000_000)
+        start_ns = time.monotonic_ns()
+        end_ns = start_ns + int(self._duration * 1_000_000_000)
         sem = asyncio.Semaphore(self._max_vus)
-        tick = 0
+
+        controller = RateController(start_ns, interval_ns)
 
         async with asyncio.TaskGroup() as tg:
             while not state.abort_event.is_set():
-                target_time = start + tick * interval
-                if target_time >= end_time:
+                now_ns = time.monotonic_ns()
+                if now_ns >= end_ns:
                     break
 
-                now = loop.time()
-                if now < target_time:
-                    await asyncio.sleep(target_time - now)
-                    now = loop.time()
+                due, next_deadline_ns = controller.advance(now_ns)
 
-                while (
-                    not state.abort_event.is_set()
-                    and start + tick * interval <= now
-                    and start + tick * interval < end_time
-                ):
+                for _ in range(due):
+                    if state.abort_event.is_set():
+                        break
                     if sem.locked():
                         state.sample_queue.put(
                             make_sample(
@@ -99,10 +96,13 @@ class ConstantArrivalRateExecutor:
                         tg.create_task(
                             self._run_iteration(state, sem),
                         )
-                    tick += 1
 
-                if tick == 0 or now >= end_time:
+                if next_deadline_ns >= end_ns:
                     break
+
+                sleep_s = max(0, (next_deadline_ns - time.monotonic_ns())) / 1_000_000_000
+                if sleep_s > 0:
+                    await asyncio.sleep(sleep_s)
 
     async def _run_iteration(
         self,
