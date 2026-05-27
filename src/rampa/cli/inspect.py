@@ -59,8 +59,8 @@ def command_inspect(args: argparse.Namespace) -> None:
 
     Examples
     --------
-    >>> command_inspect.__name__
-    'command_inspect'
+    >>> callable(command_inspect)
+    True
     """
     from rampa.loader import load_test
 

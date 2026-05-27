@@ -14,8 +14,9 @@ from rampa.ci.compare import compare_results, format_json, format_markdown, form
 def main(argv: list[str] | None = None) -> None:
     """Compare two rampa JSON result files.
 
-    >>> main.__name__
-    'main'
+    >>> import argparse
+    >>> callable(main)
+    True
     """
     parser = argparse.ArgumentParser(
         prog="python -m rampa.ci.compare",

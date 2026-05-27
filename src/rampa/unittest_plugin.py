@@ -36,7 +36,8 @@ class RampaTestCase:
                 )
                 assert result.status == RunStatus.PASSED
 
-    >>> import rampa.unittest_plugin
+    >>> hasattr(RampaTestCase, 'run_rampa')
+    True
     """
 
     def run_rampa(
@@ -70,7 +71,8 @@ class RampaTestCase:
         RunResult
             The completed test result.
 
-        >>> import rampa.unittest_plugin
+        >>> callable(RampaTestCase.run_rampa)
+        True
         """
         from rampa.config import parse_duration
 
