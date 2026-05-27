@@ -431,6 +431,7 @@ class MetricRegistry:
         self._metrics: dict[str, Metric] = {}
         self._sinks: dict[str, Sink] = {}
         self._sub_sinks: dict[SubmetricKey, Sink] = {}
+        self._sub_sinks_by_metric: dict[str, list[tuple[frozenset[tuple[str, str]], Sink]]] = {}
         self._lock = threading.Lock()
 
     def get_or_create(
@@ -525,17 +526,68 @@ class MetricRegistry:
                 return None
             key: SubmetricKey = (base_name, frozenset(tag_filter.items()))
             if key not in self._sub_sinks:
-                self._sub_sinks[key] = create_sink(metric.metric_type)
+                sink = create_sink(metric.metric_type)
+                self._sub_sinks[key] = sink
+                self._sub_sinks_by_metric.setdefault(base_name, []).append(
+                    (key[1], sink),
+                )
             return self._sub_sinks[key]
 
     def get_sub_sink(self, key: SubmetricKey) -> Sink | None:
         """Return a sub-sink by key, or None if not registered."""
         return self._sub_sinks.get(key)
 
+    def sub_sinks_for(
+        self,
+        base_name: str,
+    ) -> list[tuple[frozenset[tuple[str, str]], Sink]]:
+        """Return sub-sinks for a specific base metric name.
+
+        Parameters
+        ----------
+        base_name : str
+            Base metric name to look up.
+
+        Returns
+        -------
+        list[tuple[frozenset[tuple[str, str]], Sink]]
+            List of ``(tag_filter, sink)`` pairs for the given metric.
+
+        >>> reg = MetricRegistry()
+        >>> _ = reg.get_or_create("dur", MetricType.TREND)
+        >>> _ = reg.get_or_create_sub_sink("dur", {"status": "200"})
+        >>> len(reg.sub_sinks_for("dur"))
+        1
+        >>> len(reg.sub_sinks_for("missing"))
+        0
+        """
+        with self._lock:
+            return list(self._sub_sinks_by_metric.get(base_name, []))
+
     def all_sub_sinks(self) -> dict[SubmetricKey, Sink]:
         """Return a snapshot of all sub-sinks."""
         with self._lock:
             return dict(self._sub_sinks)
+
+    def all_sub_sinks_by_metric(
+        self,
+    ) -> dict[str, list[tuple[frozenset[tuple[str, str]], Sink]]]:
+        """Return all sub-sinks indexed by base metric name.
+
+        Returns
+        -------
+        dict[str, list[tuple[frozenset[tuple[str, str]], Sink]]]
+            Mapping from base metric name to list of ``(tag_filter, sink)`` pairs.
+
+        >>> reg = MetricRegistry()
+        >>> _ = reg.get_or_create("dur", MetricType.TREND)
+        >>> _ = reg.get_or_create_sub_sink("dur", {"status": "200"})
+        >>> by_metric = reg.all_sub_sinks_by_metric()
+        >>> "dur" in by_metric
+        True
+        """
+        with self._lock:
+            return {k: list(v) for k, v in self._sub_sinks_by_metric.items()}
 
 
 @dataclass(frozen=True)
@@ -669,6 +721,12 @@ class MetricEngine:
         repr=False,
     )
 
+    _cached_sub_sinks_by_metric: dict[str, list[tuple[frozenset[tuple[str, str]], Sink]]] = field(
+        init=False,
+        default_factory=dict,
+        repr=False,
+    )
+
     def __post_init__(self) -> None:
         """Initialize the background thread and bounded snapshot storage."""
         self._snapshots = collections.deque(maxlen=128)
@@ -683,6 +741,7 @@ class MetricEngine:
         self._running = True
         self._start_time = time.monotonic()
         self._cached_sub_sinks = self.registry.all_sub_sinks()
+        self._cached_sub_sinks_by_metric = self.registry.all_sub_sinks_by_metric()
         self._thread.start()
 
     def stop(self) -> None:
@@ -755,16 +814,14 @@ class MetricEngine:
         if sink is not None:
             sink.add(sample.value)
 
-        for key, sub_sink in self._cached_sub_sinks.items():
-            base_name, tag_set = key
-            if base_name != sample.metric:
-                continue
+        for tag_set, sub_sink in self._cached_sub_sinks_by_metric.get(sample.metric, ()):
             if all(sample.tags.get(k) == v for k, v in tag_set):
                 sub_sink.add(sample.value)
 
     def _emit_snapshot(self) -> None:
         elapsed = time.monotonic() - self._start_time
         self._cached_sub_sinks = self.registry.all_sub_sinks()
+        self._cached_sub_sinks_by_metric = self.registry.all_sub_sinks_by_metric()
         sinks = self.registry.all_sinks()
         values: dict[str, dict[str, float]] = {}
         for name, sink in sinks.items():
