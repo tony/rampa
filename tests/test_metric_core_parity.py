@@ -150,9 +150,9 @@ def test_metric_core_empty_snapshot() -> None:
     assert snap["empty"]["count"] == 0.0
 
 
-def test_use_rust_engine_flag_is_bool() -> None:
-    """_USE_RUST_ENGINE flag exists and is a bool."""
+def test_rust_metric_core_available_flag_is_bool() -> None:
+    """_RUST_METRIC_CORE_AVAILABLE flag exists and is a bool."""
     import rampa.metrics as m
 
-    val = m._USE_RUST_ENGINE
+    val = m._RUST_METRIC_CORE_AVAILABLE
     assert isinstance(val, bool)

@@ -374,11 +374,11 @@ try:
 except ImportError:
     pass
 
-_USE_RUST_ENGINE: bool = False
+_RUST_METRIC_CORE_AVAILABLE: bool = False
 try:
     from rampa._core import MetricCore as _MetricCore  # noqa: F401
 
-    _USE_RUST_ENGINE = True
+    _RUST_METRIC_CORE_AVAILABLE = True
 except ImportError:
     pass
 
