@@ -8,4 +8,5 @@ Significant design decisions and their rationale.
 :hidden:
 
 001-pure-python-rust-accelerator-module-compatibility-requirements
+002-native-boundary-execution-engine-architecture
 ```
