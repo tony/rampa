@@ -35,6 +35,14 @@ This ADR applies to:
 
 This ADR also applies to private Rust code when that code affects public behavior.
 
+This ADR governs drop-in accelerators as defined in ADR 002: native code that transparently
+replaces public Python behavior, so that removing the native build changes nothing a user can
+observe except speed. Native engines (which execute a normalized plan or batch in-process and
+may be intentionally approximate) and workers (which run independently behind a versioned
+message-passing protocol) are governed by ADR 002 and are not held to the exact-match
+requirements below. ADR 001 continues to apply to any native component that presents itself as a
+drop-in replacement for a public Python function, class, method, attribute, or module.
+
 ## Requirements
 
 ### 1. Pure Python first
