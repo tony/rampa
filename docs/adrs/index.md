@@ -9,4 +9,5 @@ Significant design decisions and their rationale.
 
 001-pure-python-rust-accelerator-module-compatibility-requirements
 002-native-boundary-and-execution-architecture
+003-load-testing-native-execution-pitfalls
 ```
