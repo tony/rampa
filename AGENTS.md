@@ -53,14 +53,16 @@ developer or agent should be able to profile a test, profile normal runtime
 usage, record profiler output, and inspect the result through documented
 commands or scripts without inventing a workflow from scratch.
 
-### Native Boundary Policy
+## Native Boundary Policy
 
-Default to no native code. Prove the bottleneck first: a profile of the user-visible path,
-against a named baseline, must show a CPU bottleneck Python cannot resolve algorithmically or
-structurally before you reach for Rust. A load generator's per-request path mostly waits on
-I/O; CPU cost concentrates in serialization, parsing, TLS, and aggregation. Native code must
-not define public behavior, add public API, or be required to install, import, or run the
-package.
+Native boundary shapes and the rules for choosing them are ADR 002 (domain-agnostic); the
+load-testing constraints below are ADR 003.
+
+Default to no native code. Prove the bottleneck first: a measurement of the user-visible path,
+against a named baseline, must show a performance, latency, scale, memory, reliability, or
+platform-interface limit Python cannot resolve algorithmically or structurally before you reach
+for Rust. Native code must not define public behavior, add public API, or be required to
+install, import, or run the package.
 
 Classify the boundary, not the component, before writing native code. Take the narrowest shape
 that honestly fits:
@@ -83,8 +85,13 @@ per-node loops unless a user-visible benchmark proves the cost is acceptable, an
 user Python from a native hot loop. Prefer plans, batches, buffers, and protocol messages.
 Release the interpreter lock during heavy native work that touches no Python objects.
 
-Arbitrary user scenarios run in the Python runtime; a native execution mode runs a declarative
-scenario subset, never arbitrary Python, and is never the default or a silent fallback.
+Load-test integrity (ADR 003): native code must not change what a load test measures. Preserve
+timing (monotonic), scheduling (scheduled vs actual start time, coordinated omission),
+timeout/cancellation/retry classification, connection accounting, and percentile/aggregation
+semantics. A load generator's per-request path is usually I/O-bound; target measured bottlenecks
+(scheduling, serialization, TLS, metrics reduction), not the request loop. Arbitrary user
+scenarios run in the Python runtime; a native execution mode runs a declarative scenario subset
+— explicit, opt-in, never a silent fallback.
 
 Keep native logic in a core with no Python-binding dependency; keep the binding thin and
 separate. The base package must install, import, and run without native code unless an ADR
