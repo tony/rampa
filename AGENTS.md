@@ -34,20 +34,6 @@ When `Any` or `object` is unavoidable, keep it local, validate or narrow it as
 soon as possible, and do not let it leak into public APIs or shared internal
 contracts.
 
-### Accelerated Python: Rust Preferred
-
-Accelerators follow a PEP 399-like rule: they must be API-exact accelerators of
-the Python implementation, not separate products. Rust is preferred for new
-accelerators, but C, Cython, C++, and Zig are acceptable when they are the right
-tool for the integration.
-
-Accelerators must compile into Python wheels, import seamlessly through the
-Python package, preserve the same public Python API, and include parity tests
-against the Python behavior. They must also have benchmark coverage that shows
-the performance improvement and makes regressions visible. Downstream bindings
-for other runtimes, such as Node.js or PHP bindings, are not accelerators under
-this policy; they are separate integration surfaces.
-
 ### Benchmarking Against Trunk, Tags, and Releases
 
 Performance claims must name the comparison baseline. Use trunk for active
@@ -66,6 +52,126 @@ Profiling must be easy to run when performance or latency work is in scope. A
 developer or agent should be able to profile a test, profile normal runtime
 usage, record profiler output, and inspect the result through documented
 commands or scripts without inventing a workflow from scratch.
+
+## Pure Python / Rust Accelerator Compatibility
+
+This project is Python-first. The pure Python implementation is the reference implementation. Rust is an optional accelerator and must not redefine public behavior.
+
+### Required engineering policy
+
+- Implement every public API in pure Python before adding Rust acceleration.
+- Treat the Python implementation as the semantic source of truth.
+- Keep Rust acceleration optional. The package must import, install, and pass tests without the Rust extension.
+- Do not expose public Rust-only functions, classes, attributes, argument forms, return shapes, or behaviors.
+- Run the same behavioral tests against both the pure Python path and the Rust-accelerated path.
+- Preserve Python duck typing. If Python accepts an iterable, mapping, sequence, path-like object, buffer-like object, subclass, or file-like object, Rust must not narrow that contract.
+- Preserve observable behavior: return values, return types where public, exceptions, mutation, ordering, equality, hashing, warnings, serialization, context-manager behavior, and async behavior.
+- Rust-specific tests are allowed, but they do not replace shared compatibility tests.
+- Public documentation and type hints describe the Python API, not Rust internals.
+- `unsafe` Rust must be minimal, justified with a nearby `SAFETY:` comment, and covered by relevant tests.
+
+### Import and fallback rule
+
+The public Python module owns the API. It may replace selected Python objects with Rust equivalents only after the Python implementation has already defined them.
+
+Preferred pattern:
+
+```python
+from ._module_py import parse, normalize, Token
+
+_HAS_RUST_ACCELERATOR = False
+
+try:
+    from ._native import parse as parse
+    from ._native import normalize as normalize
+except ImportError:
+    pass
+else:
+    _HAS_RUST_ACCELERATOR = True
+```
+
+Do not use broad fallback in normal imports:
+
+```python
+# Avoid: this can hide real defects in the Rust extension.
+try:
+    from ._native import parse
+except Exception:
+    from ._module_py import parse
+```
+
+Tests may deliberately fail on unexpected Rust import errors so native defects are not silently masked.
+
+### Compatibility test requirement
+
+Each accelerated API must have shared behavioral tests that run against both implementations.
+
+Recommended `pytest` shape:
+
+```python
+import pytest
+
+from package_name import _module_py
+
+try:
+    from package_name import _native
+except ImportError:
+    _native = None
+
+
+@pytest.fixture(params=[_module_py, _native], ids=["python", "rust"])
+def impl(request):
+    if request.param is None:
+        pytest.skip("Rust accelerator is not available")
+    return request.param
+
+
+def test_parse_empty_input(impl):
+    assert impl.parse("") == []
+
+
+def test_parse_invalid_input(impl):
+    with pytest.raises(ValueError):
+        impl.parse("\x00")
+```
+
+Tests must include normal cases, empty inputs, boundary values, invalid inputs, subclass or duck-typed inputs where relevant, mutation and aliasing behavior, repeated calls, large inputs, Unicode or binary edge cases, and error paths.
+
+### CI requirement
+
+CI must exercise both modes:
+
+```text
+Python-only job:
+  - install without the Rust extension or force the Python fallback
+  - run the full shared behavioral test suite
+
+Rust-enabled job:
+  - build/install the Rust extension
+  - run the same shared behavioral test suite
+  - run Rust-specific tests where applicable
+```
+
+A green Rust-enabled job does not compensate for a broken Python-only job.
+
+### Pull request checklist
+
+Before merging a change that adds or modifies Rust acceleration, confirm:
+
+```text
+[ ] Public behavior exists first in pure Python.
+[ ] Shared tests cover the Python behavior.
+[ ] The same tests pass with Rust enabled.
+[ ] The package imports and runs without Rust.
+[ ] Rust exposes no additional public API.
+[ ] Error behavior matches the Python implementation.
+[ ] Duck-typed inputs remain supported.
+[ ] Type hints and documentation remain accurate.
+[ ] Benchmarks or a clear performance rationale justify the accelerator.
+[ ] Unsafe Rust, if present, is documented and reviewed.
+```
+
+Final rule: Rust may make this project faster. Rust must not make it less Pythonic, less portable, less tested, or less predictable.
 
 ## Development Environment
 
