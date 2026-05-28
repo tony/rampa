@@ -74,10 +74,17 @@ future Rust/PyO3 seam.
 Throughput, scheduling, metric engine, and HTTP benchmarks.
 :::
 
+:::{grid-item-card} ADRs
+:link: ../adrs/index
+:link-type: doc
+Architecture decision records — significant design choices and rationale.
+:::
+
 ::::
 
 ```{toctree}
 :hidden:
 
 benchmark
+../adrs/index
 ```
