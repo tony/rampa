@@ -417,6 +417,59 @@ def create_sink(metric_type: MetricType) -> Sink:
             return TrendSink()
 
 
+class MetricAggregationBackend(t.Protocol):
+    """Synchronous aggregation backend used by MetricEngine.
+
+    Backends handle sink updates, tag matching, and snapshot formatting.
+    MetricEngine owns threading, callbacks, thresholds, and snapshot
+    history. The backend is a computation object with no lifecycle.
+
+    >>> class DummyBackend:
+    ...     def register_metric(self, name, metric_type, value_type=ValueType.DEFAULT): ...
+    ...     def register_submetric(self, source, base_name, tag_filter): ...
+    ...     def ingest(self, sample): ...
+    ...     def ingest_batch(self, samples): ...
+    ...     def snapshot_values(self, duration): return {}
+    ...     def snapshot_sub_values(self, duration): return {}
+    >>> hasattr(DummyBackend, "ingest")
+    True
+    """
+
+    def register_metric(
+        self,
+        name: str,
+        metric_type: MetricType,
+        value_type: ValueType = ValueType.DEFAULT,
+    ) -> None:
+        """Register a metric name and type."""
+        ...
+
+    def register_submetric(
+        self,
+        source: str,
+        base_name: str,
+        tag_filter: dict[str, str],
+    ) -> None:
+        """Register a sub-sink for tag-filtered threshold evaluation."""
+        ...
+
+    def ingest(self, sample: Sample) -> None:
+        """Ingest a single sample into the appropriate sinks."""
+        ...
+
+    def ingest_batch(self, samples: t.Sequence[Sample]) -> None:
+        """Ingest multiple samples. Default loops ``ingest()``."""
+        ...
+
+    def snapshot_values(self, duration: float) -> dict[str, dict[str, float]]:
+        """Return formatted aggregates for all base metrics."""
+        ...
+
+    def snapshot_sub_values(self, duration: float) -> dict[str, dict[str, float]]:
+        """Return formatted aggregates for submetrics keyed by source string."""
+        ...
+
+
 SubmetricKey = tuple[str, frozenset[tuple[str, str]]]
 """Identifies a tag-filtered view of a base metric.
 
@@ -596,6 +649,172 @@ class MetricRegistry:
         """
         with self._lock:
             return {k: list(v) for k, v in self._sub_sinks_by_metric.items()}
+
+
+class PythonMetricAggregationBackend:
+    """Pure-Python aggregation backend using MetricRegistry + sinks.
+
+    This is the reference implementation of ``MetricAggregationBackend``.
+    Rust accelerators must produce identical output for the same inputs.
+
+    >>> from rampa._types import MetricType, Sample, ValueType
+    >>> reg = MetricRegistry()
+    >>> _ = reg.get_or_create("reqs", MetricType.COUNTER)
+    >>> backend = PythonMetricAggregationBackend(reg)
+    >>> backend.ingest(Sample("reqs", 1.0, 0, {}))
+    >>> backend.snapshot_values(1.0)["reqs"]["count"]
+    1.0
+    """
+
+    def __init__(self, registry: MetricRegistry) -> None:
+        self._registry = registry
+        self._sub_sinks_by_metric: dict[str, list[tuple[frozenset[tuple[str, str]], Sink]]] = (
+            registry.all_sub_sinks_by_metric()
+        )
+        self._submetric_sources: dict[str, SubmetricKey] = {}
+
+    def register_metric(
+        self,
+        name: str,
+        metric_type: MetricType,
+        value_type: ValueType = ValueType.DEFAULT,
+    ) -> None:
+        """Register a metric name and type.
+
+        Parameters
+        ----------
+        name : str
+            Metric name.
+        metric_type : MetricType
+            Metric type.
+        value_type : ValueType
+            Display value type.
+
+        >>> reg = MetricRegistry()
+        >>> b = PythonMetricAggregationBackend(reg)
+        >>> b.register_metric("x", MetricType.COUNTER)
+        >>> reg.get_sink("x") is not None
+        True
+        """
+        self._registry.get_or_create(name, metric_type, value_type)
+
+    def register_submetric(
+        self,
+        source: str,
+        base_name: str,
+        tag_filter: dict[str, str],
+    ) -> None:
+        """Register a sub-sink for tag-filtered threshold evaluation.
+
+        Parameters
+        ----------
+        source : str
+            Threshold source string, e.g. ``"http_req_duration{status:200}"``.
+        base_name : str
+            Base metric name.
+        tag_filter : dict[str, str]
+            Tag key-value pairs for matching.
+
+        >>> reg = MetricRegistry()
+        >>> _ = reg.get_or_create("dur", MetricType.TREND)
+        >>> b = PythonMetricAggregationBackend(reg)
+        >>> b.register_submetric("dur{status:200}", "dur", {"status": "200"})
+        >>> "dur{status:200}" in b._submetric_sources
+        True
+        """
+        self._registry.get_or_create_sub_sink(base_name, tag_filter)
+        key: SubmetricKey = (base_name, frozenset(tag_filter.items()))
+        self._submetric_sources[source] = key
+        self._sub_sinks_by_metric = self._registry.all_sub_sinks_by_metric()
+
+    def ingest(self, sample: Sample) -> None:
+        """Ingest a single sample into the appropriate sinks.
+
+        Parameters
+        ----------
+        sample : Sample
+            The sample to ingest.
+
+        >>> reg = MetricRegistry()
+        >>> _ = reg.get_or_create("c", MetricType.COUNTER)
+        >>> b = PythonMetricAggregationBackend(reg)
+        >>> b.ingest(Sample("c", 5.0, 0, {}))
+        >>> b.snapshot_values(1.0)["c"]["count"]
+        5.0
+        """
+        sink = self._registry.get_sink(sample.metric)
+        if sink is not None:
+            sink.add(sample.value)
+        for tag_set, sub_sink in self._sub_sinks_by_metric.get(sample.metric, ()):
+            if all(sample.tags.get(k) == v for k, v in tag_set):
+                sub_sink.add(sample.value)
+
+    def ingest_batch(self, samples: t.Sequence[Sample]) -> None:
+        """Ingest multiple samples.
+
+        Parameters
+        ----------
+        samples : Sequence[Sample]
+            Samples to ingest.
+
+        >>> reg = MetricRegistry()
+        >>> _ = reg.get_or_create("c", MetricType.COUNTER)
+        >>> b = PythonMetricAggregationBackend(reg)
+        >>> b.ingest_batch([Sample("c", 1.0, 0, {}), Sample("c", 2.0, 0, {})])
+        >>> b.snapshot_values(1.0)["c"]["count"]
+        3.0
+        """
+        for sample in samples:
+            self.ingest(sample)
+
+    def snapshot_values(self, duration: float) -> dict[str, dict[str, float]]:
+        """Return formatted aggregates for all base metrics.
+
+        Parameters
+        ----------
+        duration : float
+            Elapsed test duration in seconds.
+
+        Returns
+        -------
+        dict[str, dict[str, float]]
+            Mapping from metric name to formatted aggregate values.
+
+        >>> reg = MetricRegistry()
+        >>> _ = reg.get_or_create("g", MetricType.GAUGE)
+        >>> b = PythonMetricAggregationBackend(reg)
+        >>> b.ingest(Sample("g", 42.0, 0, {}))
+        >>> b.snapshot_values(1.0)["g"]["value"]
+        42.0
+        """
+        self._sub_sinks_by_metric = self._registry.all_sub_sinks_by_metric()
+        return {name: sink.format(duration) for name, sink in self._registry.all_sinks().items()}
+
+    def snapshot_sub_values(
+        self,
+        duration: float,
+    ) -> dict[str, dict[str, float]]:
+        """Return formatted aggregates for submetrics.
+
+        Returns
+        -------
+        dict[str, dict[str, float]]
+            Mapping from threshold source string to formatted values.
+
+        >>> reg = MetricRegistry()
+        >>> _ = reg.get_or_create("dur", MetricType.TREND)
+        >>> b = PythonMetricAggregationBackend(reg)
+        >>> b.register_submetric("dur{s:200}", "dur", {"s": "200"})
+        >>> vals = b.snapshot_sub_values(1.0)
+        >>> "dur{s:200}" in vals
+        True
+        """
+        result: dict[str, dict[str, float]] = {}
+        for source, key in self._submetric_sources.items():
+            sub_sink = self._registry.get_sub_sink(key)
+            if sub_sink is not None:
+                result[source] = sub_sink.format(duration)
+        return result
 
 
 @dataclass(frozen=True)

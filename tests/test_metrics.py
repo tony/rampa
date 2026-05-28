@@ -15,6 +15,7 @@ from rampa.metrics import (
     MetricEngine,
     MetricRegistry,
     MetricSnapshot,
+    PythonMetricAggregationBackend,
     RateSink,
     TrendSink,
     register_builtins,
@@ -404,3 +405,62 @@ def test_all_sub_sinks_by_metric() -> None:
     assert "reqs" in by_metric
     assert len(by_metric["dur"]) == 1
     assert len(by_metric["reqs"]) == 1
+
+
+# --- PythonMetricAggregationBackend tests ---
+
+
+def test_python_backend_counter_ingest() -> None:
+    """PythonMetricAggregationBackend ingests counter samples."""
+    reg = MetricRegistry()
+    reg.get_or_create("reqs", MetricType.COUNTER)
+    backend = PythonMetricAggregationBackend(reg)
+
+    backend.ingest(Sample("reqs", 1.0, 0, {}))
+    backend.ingest(Sample("reqs", 2.0, 0, {}))
+
+    vals = backend.snapshot_values(10.0)
+    assert vals["reqs"]["count"] == 3.0
+    assert abs(vals["reqs"]["rate"] - 0.3) < 0.01
+
+
+def test_python_backend_sub_sink_routing() -> None:
+    """PythonMetricAggregationBackend routes to submetrics by source string."""
+    reg = MetricRegistry()
+    reg.get_or_create("dur", MetricType.COUNTER)
+    backend = PythonMetricAggregationBackend(reg)
+    backend.register_submetric("dur{status:200}", "dur", {"status": "200"})
+
+    backend.ingest(Sample("dur", 1.0, 0, {"status": "200"}))
+    backend.ingest(Sample("dur", 1.0, 0, {"status": "500"}))
+
+    sub_vals = backend.snapshot_sub_values(1.0)
+    assert "dur{status:200}" in sub_vals
+    assert sub_vals["dur{status:200}"]["count"] == 1.0
+
+
+def test_python_backend_batch_matches_individual() -> None:
+    """ingest_batch produces the same result as individual ingests."""
+    reg1 = MetricRegistry()
+    reg1.get_or_create("c", MetricType.COUNTER)
+    b1 = PythonMetricAggregationBackend(reg1)
+
+    reg2 = MetricRegistry()
+    reg2.get_or_create("c", MetricType.COUNTER)
+    b2 = PythonMetricAggregationBackend(reg2)
+
+    samples = [Sample("c", float(i), 0, {}) for i in range(10)]
+    for s in samples:
+        b1.ingest(s)
+    b2.ingest_batch(samples)
+
+    assert b1.snapshot_values(1.0) == b2.snapshot_values(1.0)
+
+
+def test_python_backend_register_metric() -> None:
+    """register_metric delegates to MetricRegistry."""
+    reg = MetricRegistry()
+    backend = PythonMetricAggregationBackend(reg)
+    backend.register_metric("new_metric", MetricType.GAUGE)
+
+    assert reg.get_sink("new_metric") is not None
