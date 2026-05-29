@@ -53,6 +53,51 @@ developer or agent should be able to profile a test, profile normal runtime
 usage, record profiler output, and inspect the result through documented
 commands or scripts without inventing a workflow from scratch.
 
+## Native Boundary Policy
+
+Native boundary shapes and the rules for choosing them are ADR 002 (domain-agnostic); the
+load-testing constraints below are ADR 003.
+
+Default to no native code. Prove the bottleneck first: a measurement of the user-visible path,
+against a named baseline, must show a performance, latency, scale, memory, reliability, or
+platform-interface limit Python cannot resolve algorithmically or structurally before you reach
+for Rust. Native code must not define public behavior, add public API, or be required to
+install, import, or run the package.
+
+Classify the boundary, not the component, before writing native code. Take the narrowest shape
+that honestly fits:
+
+1. Accelerator - a drop-in for a public Python callable. Removing the native build changes
+   nothing observable except speed. Follows ADR 001.
+2. Engine - in-process native code that executes a normalized plan or batch the Python runtime
+   builds; runs to completion, no user Python in the hot loop; may be approximate, tested
+   within a documented tolerance. Follows ADR 002.
+3. Worker - an independent process, binary, or long-lived native thread behind a versioned
+   message-passing protocol. A separate execution mode, not a hidden accelerator; its execution
+   mode and protocol ship under a follow-up ADR. Follows ADR 002.
+
+A component exposing more than one boundary must satisfy every shape it touches. On a genuine
+tie between two adjacent shapes for one boundary, take the stricter (engine over accelerator,
+worker over engine); never round down. A boundary that fits none is not designed yet.
+
+Do not cross an engine or worker boundary inside per-request, per-event, per-sample, or
+per-node loops unless a user-visible benchmark proves the cost is acceptable, and do not call
+user Python from a native hot loop. Prefer plans, batches, buffers, and protocol messages.
+Release the interpreter lock during heavy native work that touches no Python objects.
+
+Load-test integrity (ADR 003): native code must not change what a load test measures. Preserve
+timing (monotonic), scheduling (scheduled vs actual start time, coordinated omission),
+timeout/cancellation/retry classification, connection accounting, and percentile/aggregation
+semantics. A load generator's per-request path is usually I/O-bound; target measured bottlenecks
+(scheduling, serialization, TLS, metrics reduction), not the request loop. Arbitrary user
+scenarios run in the Python runtime; a native execution mode runs a declarative scenario subset
+— explicit, opt-in, never a silent fallback.
+
+Keep native logic in a core with no Python-binding dependency; keep the binding thin and
+separate. The base package must install, import, and run without native code unless an ADR
+explicitly changes that policy; do not split native artifacts into separate user-facing
+distributions without documenting the trigger.
+
 ## Pure Python / Rust Accelerator Compatibility
 
 This project is Python-first. The pure Python implementation is the reference implementation. Rust is an optional accelerator and must not redefine public behavior.

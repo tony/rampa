@@ -9,6 +9,16 @@
 _Notes on the upcoming release will go here._
 <!-- END PLACEHOLDER - ADD NEW CHANGELOG ENTRIES BELOW THIS LINE -->
 
+### Development
+
+#### Native-code boundary policy
+
+Architecture decision records now define when and how rampa reaches for native
+code: a domain-agnostic boundary taxonomy (accelerator, engine, worker) plus
+load-testing guardrails that keep native speed from changing what a test
+measures. Charts the course for future Rust work without committing to any yet.
+(#6)
+
 ## rampa 0.0.1a1 (2026-05-27)
 
 rampa 0.0.1a1 ships pluggable output backends, protocol clients for
