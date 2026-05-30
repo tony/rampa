@@ -11,10 +11,12 @@ import json
 import textwrap
 import typing as t
 
+import pytest
 from aiohttp import web
 
 from rampa.events import RunStatus
 from rampa.loader import load_test
+from rampa.outputs.github import GitHubActionsOutput
 from rampa.runner import run_test
 
 
@@ -114,3 +116,110 @@ def test_e2e_failing_threshold(tmp_path: t.Any) -> None:
 
     status = asyncio.run(_run())
     assert status == RunStatus.THRESHOLD_FAILED
+
+
+def test_e2e_github_output_writes_step_summary(
+    tmp_path: t.Any,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """GitHub output writes the final run summary through run_test()."""
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    script = tmp_path / "test_github_summary.py"
+    script.write_text(
+        textwrap.dedent("""\
+        from __future__ import annotations
+
+        import rampa
+        from rampa import Config
+
+        config = Config(
+            thresholds={
+                "http_req_duration": ["avg<0.001"],
+            },
+        )
+
+        @rampa.scenario(executor="constant-vus", vus=1, duration="200ms")
+        async def default(worker: rampa.Worker) -> None:
+            await worker.http.get("http://127.0.0.1:{port}/api/test")
+    """)
+    )
+
+    async def _run() -> RunStatus:
+        server_runner, port = await _start_test_server()
+        try:
+            final_script = tmp_path / "test_github_summary_final.py"
+            final_script.write_text(
+                script.read_text().replace("{port}", str(port)),
+            )
+            summary_path = tmp_path / "github-summary.md"
+            plan = load_test(str(final_script))
+            result = await run_test(
+                plan,
+                quiet=True,
+                extra_outputs=[
+                    GitHubActionsOutput(summary_path=str(summary_path)),
+                ],
+            )
+            return result.status
+        finally:
+            await server_runner.cleanup()
+
+    status = asyncio.run(_run())
+    summary = (tmp_path / "github-summary.md").read_text()
+    assert status == RunStatus.THRESHOLD_FAILED
+    assert "## rampa Results" in summary
+    assert "**Thresholds:** 0/1 passing" in summary
+    assert "- :x: `avg<0.001`" in summary
+
+
+def test_e2e_github_output_emits_threshold_annotation(
+    tmp_path: t.Any,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """GitHub output emits workflow annotations through run_test()."""
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    script = tmp_path / "test_github_annotation.py"
+    script.write_text(
+        textwrap.dedent("""\
+        from __future__ import annotations
+
+        import rampa
+        from rampa import Config
+
+        config = Config(
+            thresholds={
+                "http_req_duration": ["avg<0.001"],
+            },
+        )
+
+        @rampa.scenario(executor="constant-vus", vus=1, duration="200ms")
+        async def default(worker: rampa.Worker) -> None:
+            await worker.http.get("http://127.0.0.1:{port}/api/test")
+    """)
+    )
+
+    async def _run() -> RunStatus:
+        server_runner, port = await _start_test_server()
+        try:
+            final_script = tmp_path / "test_github_annotation_final.py"
+            final_script.write_text(
+                script.read_text().replace("{port}", str(port)),
+            )
+            summary_path = tmp_path / "github-summary.md"
+            plan = load_test(str(final_script))
+            result = await run_test(
+                plan,
+                quiet=True,
+                extra_outputs=[
+                    GitHubActionsOutput(summary_path=str(summary_path)),
+                ],
+            )
+            return result.status
+        finally:
+            await server_runner.cleanup()
+
+    status = asyncio.run(_run())
+    captured = capsys.readouterr()
+    assert status == RunStatus.THRESHOLD_FAILED
+    assert "::error::Threshold failed: avg<0.001" in captured.out

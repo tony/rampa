@@ -98,6 +98,33 @@ separate. The base package must install, import, and run without native code unl
 explicitly changes that policy; do not split native artifacts into separate user-facing
 distributions without documenting the trigger.
 
+## Self-Measurement Policy
+
+How rampa tests, benchmarks, and profiles itself is policy, not ad-hoc tooling: ADR 004
+(self-harnessing), ADR 005 (self-benchmarking), and ADR 006 (self-profiling) in docs/adrs/. They
+make the native-boundary preconditions above enforceable rather than aspirational. A load
+generator's own cost competes with what it measures, so the rule across all three is: detect
+regressions deterministically by counting, and measure wall-clock latency separately and on demand.
+
+Self-harness (ADR 004). Test the framework by running it end-to-end against a controllable target
+and asserting exact outcomes — request distribution, metric aggregates, threshold verdicts — not
+"ran without raising." The shared behavioral suite runs against both the pure-Python and native
+paths; CI runs a mandatory Python-only job. Make tests deterministic by construction: injected
+monotonic clock, seeded randomness, pinned ports, repeat-and-diff leak checks.
+
+Self-benchmark (ADR 005). Catch regressions on every pull request by counting — function calls,
+allocations, events, connections — against a checked-in baseline keyed by environment and by
+whether the accelerator is present; counts are deterministic, so they never flake on a busy CI
+machine. Measure wall-clock latency and throughput separately: against a named baseline (trunk,
+tag, release), reported as a geometric mean, run deliberately on a controlled machine rather than
+on every pull request. Native code requires such a measurement of the user-visible path against a
+named baseline first.
+
+Self-profile (ADR 006). Profiling a test, a run, or the native accelerator is one documented
+command, defaults to zero-dependency standard-library tooling, emits a standard format, and prints
+how to inspect it. Distinguish wall vs CPU vs GIL time; keep instrumentation zero-overhead when
+off; profile release-shaped builds; never let profiling change what a load test measures.
+
 ## Pure Python / Rust Accelerator Compatibility
 
 This project is Python-first. The pure Python implementation is the reference implementation. Rust is an optional accelerator and must not redefine public behavior.

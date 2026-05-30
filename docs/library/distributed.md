@@ -47,6 +47,10 @@ $ rampa archive create load_test.py -o test.rampa
 ```
 
 Contents: script, data files, `requirements.txt`, `manifest.json`.
+Archives are input bundles, not result stores. In a distributed run, the
+coordinator aggregates worker samples and output backends decide where
+results are retained: local JSON/CSV artifacts, remote metric stores, CI
+summaries, or custom ingestion.
 
 ```python
 from rampa.distributed.archive import create_archive, extract_archive

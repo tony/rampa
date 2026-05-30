@@ -114,7 +114,7 @@ Threshold breaches produce exit code 1 for CI integration.
 - **pytest plugin** — `@pytest.mark.rampa_scenario` for test suites
 - **unittest mixin** — `RampaTestCase` for unittest integration
 - **MCP server** — `rampa-mcp` for AI agent integration
-- **Output backends** — CSV, InfluxDB, Prometheus, OTEL, webhooks via `--output`
+- **Output backends** — JSON, CSV, GitHub Actions, InfluxDB, Prometheus, OTEL, webhooks via `--output`
 - **CI comparison** — `python -m rampa.ci.compare` for benchmark diffs
 
 ```{toctree}

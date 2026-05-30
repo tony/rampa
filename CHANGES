@@ -19,6 +19,27 @@ load-testing guardrails that keep native speed from changing what a test
 measures. Charts the course for future Rust work without committing to any yet.
 (#6)
 
+#### Self-measurement policy
+
+Three architecture decision records define how rampa tests, benchmarks, and
+profiles itself: a deterministic end-to-end self-harness run against both the
+pure-Python and native paths; benchmarking that catches regressions by counting
+(function calls, allocations, connections) rather than on flaky wall-clock, and
+reserves latency claims for a named baseline; and one-command, dependency-free
+profiling that never distorts what a load test measures. Together they make the
+native-boundary preconditions from ADR 002 and ADR 003 enforceable rather than
+aspirational. (#7)
+
+#### Target capabilities (clean-slate vision)
+
+An architecture-decision record now states what rampa is for: a single contract
+that scales unchanged from a single process to a distributed fleet, honest
+measurement under load, multi-protocol support behind one interface, and a
+Python-first core accelerated by Rust only where measurement proves it earns
+its place. Each capability is anchored to a working example in a production
+load generator or Python/Rust project, with the technical design handed to a
+roadmap of follow-up records. (#7)
+
 ## rampa 0.0.1a1 (2026-05-27)
 
 rampa 0.0.1a1 ships pluggable output backends, protocol clients for

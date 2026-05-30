@@ -38,7 +38,7 @@ Expression syntax and pass/fail evaluation.
 :::{grid-item-card} Outputs
 :link: outputs
 :link-type: doc
-Send results to CSV, InfluxDB, Prometheus, OTEL, and more.
+Store or deliver results as JSON, CSV, GitHub Actions summaries, remote metrics, and webhooks.
 :::
 
 :::{grid-item-card} TUI Dashboard
@@ -62,7 +62,7 @@ Split tests across machines with execution segments.
 :::{grid-item-card} CI Integration
 :link: ci
 :link-type: doc
-GitHub Actions, result comparison, and benchmarking.
+GitHub Actions artifacts, result comparison, and benchmarking.
 :::
 
 :::{grid-item-card} API Reference

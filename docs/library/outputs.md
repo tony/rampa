@@ -3,19 +3,30 @@
 # Output backends
 
 rampa ships metric samples to output backends during and after a test run.
-Use `--output` to send results to multiple destinations simultaneously.
+Use `--output` to send results to multiple destinations simultaneously. Local
+file backends create artifacts, remote backends deliver sample batches to
+external stores, and CI backends present results inside the workflow.
 
 ## Built-in backends
 
-| Backend | Destination | Dependencies |
-|---------|------------|-------------|
-| `console` | Terminal summary (default) | None |
-| `json` | JSON file | None |
-| `csv` | CSV file | None |
-| `influxdb` | InfluxDB HTTP API | aiohttp (included) |
-| `prometheus` | Prometheus remote write | aiohttp; optional `python-snappy` |
-| `otel` | OpenTelemetry collector | aiohttp (included) |
-| `webhook` | Any HTTP endpoint | aiohttp (included) |
+| Backend | Storage / delivery | Covers | Dependencies |
+|---|---|---|---|
+| `console` | Terminal summary (default) | Final human-readable run summary | None |
+| `json` | Local JSON file | Sample artifact, final summary, threshold results | None |
+| `csv` | Local CSV file | One row per sample for spreadsheets or warehouse import | None |
+| `influxdb` | InfluxDB HTTP line protocol | Time-series storage | aiohttp (included) |
+| `prometheus` | Prometheus remote write | Prometheus/Grafana metric storage | aiohttp; optional `python-snappy` |
+| `otel` | OTLP/HTTP JSON | OpenTelemetry collector pipeline | aiohttp (included) |
+| `github` | GitHub Actions annotations and step summary | CI presentation, not durable metric storage | None |
+| `webhook` | HTTP JSON batches | Custom ingestion services | aiohttp (included) |
+
+## Storage shape
+
+Use `json` or `csv` when the run needs a durable file artifact. Use
+InfluxDB, Prometheus, OTEL, or webhook outputs when another system owns
+retention, dashboards, or downstream ingestion. Use the GitHub Actions
+surface for workflow summaries and annotations, usually alongside a JSON
+artifact for comparison.
 
 ## CLI usage
 
@@ -32,6 +43,18 @@ $ rampa run load_test.py \
 ```
 
 The `--out` flag is shorthand for `--output json=<path>`.
+
+## JSON
+
+JSON is the default artifact format for CI comparison and machine-readable
+run storage.
+
+```console
+$ rampa run load_test.py --out results.json
+```
+
+The file stores buffered samples. When the runner has a final metric
+snapshot, it also writes summary metrics and threshold results.
 
 ## CSV
 
@@ -99,6 +122,12 @@ $ rampa run load_test.py --output otel=http://localhost:4318
 
 The `/v1/metrics` path is appended automatically. Uses the JSON wire
 format (proto3 standard JSON mapping) — no protobuf compiler needed.
+
+## GitHub Actions
+
+GitHub Actions output is for workflow presentation: threshold annotations
+and `$GITHUB_STEP_SUMMARY` content. Keep JSON or CSV enabled when the run
+also needs a downloadable artifact or a baseline for later comparison.
 
 ## Webhook
 
