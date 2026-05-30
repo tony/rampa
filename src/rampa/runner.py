@@ -18,7 +18,9 @@ from rampa.engine import Engine, EngineOptions, RunController
 from rampa.errors import ExitCode
 from rampa.events import RunResult, RunStatus, serialize_event
 from rampa.loader import TestPlan
+from rampa.metrics import MetricSnapshot
 from rampa.output import ConsoleOutput, JSONOutput, OutputManager
+from rampa.thresholds import ThresholdResult
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +32,19 @@ _STATUS_TO_EXIT: dict[RunStatus, ExitCode] = {
     RunStatus.TEARDOWN_FAILED: ExitCode.TEARDOWN_FAILURE,
     RunStatus.STOPPED: ExitCode.ABORTED,
 }
+
+
+@t.runtime_checkable
+class _SummaryOutput(t.Protocol):
+    """Output backend that can render a final run summary."""
+
+    def write_summary(
+        self,
+        snapshot: MetricSnapshot,
+        threshold_results: list[ThresholdResult] | None = None,
+    ) -> None:
+        """Write a final summary from the completed run result."""
+        ...
 
 
 async def run_test(
@@ -82,10 +97,8 @@ async def run_test(
     if console:
         output_mgr.add(console)
 
-    json_out: JSONOutput | None = None
     if json_output_path:
-        json_out = JSONOutput(json_output_path)
-        output_mgr.add(json_out)
+        output_mgr.add(JSONOutput(json_output_path))
 
     if extra_outputs:
         for out in extra_outputs:
@@ -117,8 +130,9 @@ async def run_test(
     if result.snapshot:
         if console:
             console.render_summary(result.snapshot, result.threshold_results)
-        if json_out:
-            json_out.write_summary(result.snapshot, result.threshold_results)
+        for output in output_mgr.outputs:
+            if isinstance(output, _SummaryOutput):
+                output.write_summary(result.snapshot, result.threshold_results)
 
     return result
 
