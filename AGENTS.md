@@ -723,6 +723,35 @@ patterns:
   *best practices* with concrete descriptions of behavior,
   constraints, or trade-offs.
 
+### Privacy and Local Path Hygiene
+
+Do not commit private, workstation-specific, or environment-specific
+details in tracked files, generated docs, research notes, examples,
+tests, fixtures, changelog entries, PR text, or commit messages.
+
+Before committing, check both the staged diff and the intended commit
+message. Keep these out of the repository:
+
+- **Local paths:** home directories (`~/...`, `/home/...`, `/Users/...`),
+  temporary directories, editor or tool cache paths, personal checkout
+  roots, and machine-specific mount points. Use repo-relative paths,
+  public URLs pinned to stable tags or refs, or generic examples instead.
+- **PII:** personal email addresses, phone numbers, private account IDs,
+  real user names, internal hostnames, customer names, and organization
+  details unless they are already part of the public project identity.
+- **Secrets:** tokens, API keys, passwords, private keys, cookies,
+  credentials, session IDs, and signed URLs.
+- **Local-only provenance:** notes such as "from my laptop",
+  workstation-specific source directories, shell history, clipboard
+  contents, editor state, or paths to private notes. Move that context to
+  private notes or PR discussion when it is useful but not publishable.
+
+If a private detail already landed in a branch, remove it at the causal
+commit when history is still private: use a targeted `fixup!` or
+`amend!` commit and `git rebase --autosquash`. If the detail may have
+left the local machine, stop and ask before rewriting history; secrets
+may need rotation rather than just removal.
+
 ### Preservation & Context
 
 **When unsure, leave the text in place and ask.** Subjective cleanup
