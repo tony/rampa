@@ -201,9 +201,9 @@ what metrics, artifacts, threshold selectors, and distributed partitioning key o
 
 ### Checks are facts; thresholds are policy
 
-Per-iteration checks return facts about a single operation result (the `subject` passed to the
-check); thresholds evaluate aggregate policy and drive the CI exit code. Both are first-class, because an API user needs a pass/fail verdict, not
-only a summary.
+Per-iteration checks return facts about a single operation result: the `subject` passed to the
+check. Thresholds evaluate aggregate policy and drive the CI exit code. Both are first-class,
+because an API user needs a pass/fail verdict, not only a summary.
 
 The primary check form is a named boolean. It reads cleanly for the common case, evaluates eagerly
 in user code, types well, and stays out of the hot path:
@@ -216,7 +216,7 @@ vu.check("has body", len(res.body) > 0, subject=res)
 A raising expression in a named-boolean check is a scenario error, not a check failure, because the
 framework never sees the predicate. When framework-managed evaluation is wanted — a predicate that
 raises should be classified as a failed check rather than aborting the iteration — or when many
-checks share a response, the batch form takes a mapping of named predicates:
+checks share a subject, the batch form takes a mapping of named predicates:
 
 ```python
 vu.check_all(res, {
