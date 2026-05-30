@@ -13,4 +13,5 @@ Significant design decisions and their rationale.
 004-self-harnessing-deterministic-self-testing
 005-self-benchmarking-baselines-and-regression-detection
 006-self-profiling-one-command-and-integrity
+007-target-capabilities-and-aspirations
 ```
