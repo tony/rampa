@@ -46,12 +46,14 @@ trade-off.
 ## Distributed / aggregation
 
 RMI master/worker: the master serializes the plan to remote engines; workers stream `SampleResult`s
-back through `RemoteSampleListener`. Pluggable `SampleSender` strategies (Standard, Batch, Hold,
-Statistical pre-aggregation, DataStripping) control wire volume — because sending every sample swamps
-the network and the controller, which is the documented scaling bottleneck (it runs every
-listener/collector for the whole fleet). Live metrics stream off the hot path via the asynchronous
-`BackendListener` queue.
+back through `RemoteSampleListener`. `SampleSenderFactory` selects the wire strategy: `Standard`,
+`Batch`, `Asynch`, `DiskStore`, `Statistical`, or `DataStripping` wrappers (`Stripped`,
+`StrippedBatch`, `StrippedAsynch`, `StrippedDiskStore`). These modes control wire volume because
+sending every sample swamps the network and the controller, which is the documented scaling
+bottleneck (it runs every listener/collector for the whole fleet). Live metrics stream off the hot
+path via the asynchronous `BackendListener` queue.
 → [`samplers/RemoteSampleListener.java`](https://github.com/apache/jmeter/blob/rel/v5.6.3/src/core/src/main/java/org/apache/jmeter/samplers/RemoteSampleListener.java),
+[`samplers/SampleSenderFactory.java`](https://github.com/apache/jmeter/blob/rel/v5.6.3/src/core/src/main/java/org/apache/jmeter/samplers/SampleSenderFactory.java),
 [`visualizers/backend/BackendListener.java`](https://github.com/apache/jmeter/blob/rel/v5.6.3/src/components/src/main/java/org/apache/jmeter/visualizers/backend/BackendListener.java)
 
 ## Scenario / user API
