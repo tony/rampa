@@ -723,6 +723,39 @@ patterns:
   *best practices* with concrete descriptions of behavior,
   constraints, or trade-offs.
 
+### No Private Labeling Systems
+
+Do not introduce or manage private shorthand labeling systems in
+tracked artifacts. This applies to docs, ADRs, code comments, examples,
+tests, fixtures, changelog entries, PR descriptions, release text, and
+commit messages.
+
+Avoid repo-private label schemes, ranking labels, pass labels, taxonomy
+labels, shorthand buckets, or agent-only planning names unless they are
+already a real public API, protocol term, metric name, version, issue or
+PR reference, ADR number, or user-facing domain vocabulary. Use
+descriptive nouns instead: behavior names, capability names, runtime
+modes, output backends, or measured concepts.
+
+Before committing, review new headings, tables, bullets, changelog
+entries, and commit messages for shorthand labels. Classify each hit as
+public vocabulary, domain metric, or slop. Remove slop at the causal
+commit with `fixup!` / `amend!` and `git rebase --autosquash` when
+branch history is still private.
+
+Use shape-based scans so the policy does not seed the exact labels it is
+meant to prevent:
+
+```console
+$ git diff --unified=0 main...HEAD -- AGENTS.md CHANGES docs notes src tests \
+  | rg -n '^\+[^+].*(\b[A-Z][0-9]{1,3}\b|\b[A-Z]{1,3}-[0-9]{1,5}\b|\b(pass|phase|level|category|class|stage)\s+([A-Z][0-9]{0,3}|[0-9]{1,3})\b|T[O]DO|T[B]D|placeholde[r])'
+```
+
+```console
+$ git log --format='%H%n%s%n%b%n---END---' main..HEAD \
+  | rg -n '(\b[A-Z][0-9]{1,3}\b|\b[A-Z]{1,3}-[0-9]{1,5}\b|\b(pass|phase|level|category|class|stage)\s+([A-Z][0-9]{0,3}|[0-9]{1,3})\b|T[O]DO|T[B]D|placeholde[r])'
+```
+
 ### Privacy and Local Path Hygiene
 
 Do not commit private, workstation-specific, or environment-specific
