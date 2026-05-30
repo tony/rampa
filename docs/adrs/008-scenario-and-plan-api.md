@@ -110,10 +110,11 @@ async def smoke(vu: rampa.VU) -> None:
     ...
 ```
 
-Schedule precedence is explicit: an explicit `Plan`/`Scenario` schedule overrides a `run(...,
-schedule=...)` argument, which overrides a decorator `default_schedule`. Supplying both a decorator
-`default_schedule` and an explicit `Scenario(schedule=...)` for the same scenario is a normalization
-error, not a silent override.
+Schedule precedence is explicit, as three rules. A `Scenario(schedule=...)` takes precedence over a
+`run(..., schedule=...)` argument. A decorator `default_schedule` is used only when neither a
+`Scenario` schedule nor a `run` schedule is given. Supplying both a decorator `default_schedule` and
+an explicit `Scenario(schedule=...)` for the same scenario is a normalization error, not a silent
+override.
 
 ### The scenario and the VU runtime handle
 
@@ -200,8 +201,8 @@ what metrics, artifacts, threshold selectors, and distributed partitioning key o
 
 ### Checks are facts; thresholds are policy
 
-Per-iteration checks return facts about a single response; thresholds evaluate aggregate policy and
-drive the CI exit code. Both are first-class, because an API user needs a pass/fail verdict, not
+Per-iteration checks return facts about a single operation result (the `subject` passed to the
+check); thresholds evaluate aggregate policy and drive the CI exit code. Both are first-class, because an API user needs a pass/fail verdict, not
 only a summary.
 
 The primary check form is a named boolean. It reads cleanly for the common case, evaluates eagerly
@@ -342,8 +343,8 @@ roadmap:
   `vu.http` / `vu.ws` / `vu.grpc` surfaces; operation naming; protocol-specific check ergonomics; the
   general protocol-defaults structure `base_url` is sugar over.
 - **ADR 012 — metric engine and storage, and aggregate thresholds.** Bounded, mergeable summaries;
-  reduce-after-merge; and the aggregate threshold expression grammar and evaluation. Per-request
-  check *semantics* are decided in this ADR; the aggregate threshold *language* lives here.
+  reduce-after-merge; and the aggregate threshold expression grammar and evaluation. Named-check
+  emission *semantics* are decided in this ADR; the aggregate threshold *language* lives here.
 - **ADR 013 — scale modes and control plane.** `ExecutionDriver` modes (local, process, distributed,
   remote); deterministic partitioning; capability negotiation; start barrier; run-relative time
   model; archives; and artifacts.
