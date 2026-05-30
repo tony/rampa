@@ -286,3 +286,110 @@ def evaluate_thresholds(
             continue
         results.extend(evaluate_threshold(threshold, sink, duration) for threshold in thresholds)
     return results
+
+
+def evaluate_threshold_value(
+    threshold: Threshold,
+    values: t.Mapping[str, float],
+) -> ThresholdResult:
+    """Evaluate a single threshold against pre-formatted values.
+
+    Accepts a mapping of aggregation keys to values instead of a
+    ``Sink`` object. Useful when the values come from a Rust backend
+    that formats internally.
+
+    Parameters
+    ----------
+    threshold : Threshold
+        The threshold to evaluate.
+    values : Mapping[str, float]
+        Pre-formatted aggregation values (e.g. from ``sink.format()``).
+
+    Returns
+    -------
+    ThresholdResult
+        Whether the threshold passed.
+
+    >>> t = Threshold(
+    ...     source="count>=100",
+    ...     expression=parse_threshold("count>=100"),
+    ... )
+    >>> evaluate_threshold_value(t, {"count": 150.0, "rate": 15.0}).passed
+    True
+    >>> evaluate_threshold_value(t, {"count": 50.0, "rate": 5.0}).passed
+    False
+    """
+    key = _sink_key(threshold.expression.aggregation)
+    lhs = values.get(key, 0.0)
+    op_fn = _OPERATORS.get(threshold.expression.operator, operator.lt)
+    passed = op_fn(lhs, threshold.expression.value)
+    threshold.last_failed = not passed
+    return ThresholdResult(
+        source=threshold.source,
+        passed=passed,
+        lhs=lhs,
+        rhs=threshold.expression.value,
+    )
+
+
+def evaluate_threshold_values(
+    metric_thresholds: t.Mapping[str, t.Sequence[Threshold]],
+    values: t.Mapping[str, t.Mapping[str, float]],
+    sub_values: t.Mapping[str, t.Mapping[str, float]] | None = None,
+) -> list[ThresholdResult]:
+    """Evaluate thresholds against pre-formatted value dicts.
+
+    Like ``evaluate_thresholds`` but accepts formatted dicts instead of
+    ``Sink`` objects. Sub-values are keyed by threshold source strings
+    (e.g. ``"http_req_duration{status:200}"``).
+
+    Parameters
+    ----------
+    metric_thresholds : Mapping[str, Sequence[Threshold]]
+        Metric name → thresholds.
+    values : Mapping[str, Mapping[str, float]]
+        Base metric name → formatted values.
+    sub_values : Mapping[str, Mapping[str, float]] | None
+        Threshold source string → formatted values for submetrics.
+
+    Returns
+    -------
+    list[ThresholdResult]
+        Results for each threshold.
+
+    >>> t = Threshold(
+    ...     source="count>=100",
+    ...     expression=parse_threshold("count>=100"),
+    ... )
+    >>> results = evaluate_threshold_values(
+    ...     {"reqs": [t]},
+    ...     {"reqs": {"count": 150.0, "rate": 15.0}},
+    ... )
+    >>> results[0].passed
+    True
+    """
+    results: list[ThresholdResult] = []
+    for metric_name, thresholds in metric_thresholds.items():
+        base_name, tag_filter = parse_submetric(metric_name)
+
+        source_values: t.Mapping[str, float] | None = None
+        if tag_filter and sub_values is not None:
+            source_values = sub_values.get(metric_name)
+        if source_values is None:
+            source_values = values.get(base_name)
+
+        if source_values is None:
+            results.extend(
+                ThresholdResult(
+                    source=threshold.source,
+                    passed=True,
+                    lhs=0.0,
+                    rhs=threshold.expression.value,
+                )
+                for threshold in thresholds
+            )
+            continue
+        results.extend(
+            evaluate_threshold_value(threshold, source_values) for threshold in thresholds
+        )
+    return results
