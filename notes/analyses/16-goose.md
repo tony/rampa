@@ -1,6 +1,6 @@
 # goose — structural analysis
 
-**Classification:** Rust · tokio-task concurrency · closed-loop user loop (+ optional open-loop
+**Classification:** Rust · tokio-task concurrency · closed-loop user loop (+ global request
 throttle) · code-first scenarios · single-process.
 Pinned at [`tag1consulting/goose@0.18.1`](https://github.com/tag1consulting/goose/tree/0.18.1).
 
@@ -20,6 +20,8 @@ leaky-bucket token broker over a bounded channel — a user must take a token be
 both the throttle and spawn cadence are drift-corrected by `sleep_minus_drift`, which subtracts
 elapsed work-time from the intended sleep so pacing does not accumulate drift. Timing is monotonic
 `std::time::Instant`; `SystemTime` is used only for wall-clock event labels.
+The throttle caps the global request rate; it is not an open-loop arrival scheduler because slow
+responses still hold the user loop and reduce realized throughput.
 → [`src/throttle.rs`](https://github.com/tag1consulting/goose/blob/0.18.1/src/throttle.rs),
 [`src/util.rs`](https://github.com/tag1consulting/goose/blob/0.18.1/src/util.rs)
 

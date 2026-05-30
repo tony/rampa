@@ -11,6 +11,7 @@ the ones that don't make a deliberate library-first choice.
 | locust | master/worker | ZeroMQ ROUTER/DEALER + msgpack `Message(type,data,node_id)` | aggregated stats every ~3 s | merges histograms; runs no users |
 | jmeter | master/worker | RMI `RemoteSampleListener` | `SampleResult`s (volume tuned by `SampleSender`) | aggregates all samples (bottleneck) |
 | artillery | launcher/workers | worker_threads locally; SQS/queue on Lambda/Fargate | DDSketch periods (timestamp-bucketed) | merges periods, timeout-bounded |
+| k6 | single-process local runner | outputs/cloud adapters consume sample batches | samples or output-specific buckets | none locally |
 | vegeta | single-process | — (Unix pipes between stages) | — | none |
 | hey | single-process | — | — | none |
 | wrk | single-process | — | — | none |
@@ -18,13 +19,15 @@ the ones that don't make a deliberate library-first choice.
 
 Source: locust [`locust/rpc/protocol.py`](https://github.com/locustio/locust/blob/2.44.0/locust/rpc/protocol.py) ·
 jmeter [`samplers/RemoteSampleListener.java`](https://github.com/apache/jmeter/blob/rel/v5.6.3/src/core/src/main/java/org/apache/jmeter/samplers/RemoteSampleListener.java) ·
-artillery [`platform/local/worker.js`](https://github.com/artilleryio/artillery/blob/artillery-2.0.32/packages/artillery/lib/platform/local/worker.js).
+artillery [`platform/local/worker.js`](https://github.com/artilleryio/artillery/blob/artillery-2.0.32/packages/artillery/lib/platform/local/worker.js) ·
+k6 [`output/types.go`](https://github.com/grafana/k6/blob/v2.0.0/output/types.go).
 
 ## The rules the distributing tools share
 
 1. **Ship summaries, not raw events.** locust sends periodic aggregated stats; jmeter offers
-   `Statistical`/`DataStripping` senders precisely because per-sample RMI swamps the controller;
-   artillery ships DDSketch periods. Per-request events across the wire is the anti-pattern.
+   `Batch`, `Asynch`, `DiskStore`, `Statistical`, and `DataStripping` senders precisely because
+   per-sample RMI swamps the controller; artillery ships DDSketch periods. Per-request events
+   across the wire is the anti-pattern.
 2. **Reduce after merge.** The coordinator combines mergeable summaries (sum histograms / merge
    sketches) and computes percentiles on the result — see [`21`](21-metric-data-structures.md). This is
    why distribution *requires* a mergeable metric structure.
@@ -37,7 +40,7 @@ artillery [`platform/local/worker.js`](https://github.com/artilleryio/artillery/
 
 ## The single-process choice
 
-vegeta, hey, wrk, and goose deliberately do not build distribution in: they are library-first or
-single-binary, reach high per-box throughput (open-loop goroutines / sharded reactors / tokio tasks),
-and leave fan-out to the operator (shell, orchestrator, or a wrapping program). The trade is
-simplicity and a clean library boundary against turnkey fleet scale.
+k6's local runner, vegeta, hey, wrk, and goose deliberately do not build distribution in: they are
+library-first or single-binary, reach high per-box throughput (open-loop goroutines / sharded
+reactors / tokio tasks), and leave fan-out to the operator (shell, orchestrator, cloud service, or a
+wrapping program). The trade is simplicity and a clean library boundary against turnkey fleet scale.

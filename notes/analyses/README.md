@@ -20,6 +20,7 @@ direction but decide nothing.
 |---|---|---|
 | locust | `locustio/locust` | `2.44.0` |
 | jmeter | `apache/jmeter` | `rel/v5.6.3` |
+| k6 | `grafana/k6` | `v2.0.0` |
 | vegeta | `tsenart/vegeta` | `v12.13.0` |
 | hey | `rakyll/hey` | `v0.1.5` |
 | wrk | `wg/wrk` | `4.2.0` |
@@ -31,7 +32,7 @@ direction but decide nothing.
 - [`00-taxonomy.md`](00-taxonomy.md) — the types of load testers, as a classification matrix.
 - Per-tool structural docs: [`10-locust.md`](10-locust.md), [`11-jmeter.md`](11-jmeter.md),
   [`12-vegeta.md`](12-vegeta.md), [`13-hey.md`](13-hey.md), [`14-wrk.md`](14-wrk.md),
-  [`15-artillery.md`](15-artillery.md), [`16-goose.md`](16-goose.md).
+  [`15-artillery.md`](15-artillery.md), [`16-goose.md`](16-goose.md), [`17-k6.md`](17-k6.md).
 - Cross-cutting: [`20-engines-and-scheduling.md`](20-engines-and-scheduling.md),
   [`21-metric-data-structures.md`](21-metric-data-structures.md),
   [`22-distributed-and-aggregation.md`](22-distributed-and-aggregation.md).

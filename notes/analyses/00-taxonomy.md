@@ -29,11 +29,12 @@ ergonomics*. Everything else is detail.
 |---|---|---|---|---|---|
 | locust | Python | greenlet (gevent) | closed-loop VU (+ pacing) | code-first | yes (ZeroMQ master/worker) |
 | jmeter | JVM | thread-per-VU | closed-loop (open-model bolted on) | declarative (XML tree) | yes (RMI) |
+| k6 | Go + embedded JS | goroutine + per-VU JS runtime | mixed: closed-loop VU executors + **open-loop** arrival-rate executors | code-first JS + declarative options | no (local runner) |
 | vegeta | Go | goroutine (dynamic pool) | **open-loop** (pacer) | CLI + targets file / library | no (single-process) |
 | hey | Go | goroutine (fixed pool) | closed-loop (+ per-worker QPS) | CLI (single request) | no |
 | wrk | C | sharded-reactor (epoll/kqueue) | closed-loop (open-loop in wrk2) | script-hook (LuaJIT) | no |
 | artillery | Node | event-loop (libuv) | **open-loop** (arrival phases) | declarative YAML + JS hooks | yes (worker_threads / Lambda / Fargate) |
-| goose | Rust | tokio-task | closed-loop (+ open-loop throttle) | code-first | no (single-process) |
+| goose | Rust | tokio-task | closed-loop (+ global request throttle) | code-first | no (single-process) |
 
 ## What the axes imply
 
@@ -41,13 +42,15 @@ ergonomics*. Everything else is detail.
   VUs on memory and context-switching; greenlet/goroutine/event-loop/tokio reach tens of thousands
   to 100k+ req/s on one core/host because a blocked VU is nearly free. This is why every
   high-throughput tool avoids a thread per VU.
-- **The scheduling model is the honesty ceiling.** Open-loop tools (vegeta, artillery, wrk2)
-  keep firing on schedule when the target stalls, so they measure overload; closed-loop tools
-  (hey, locust, jmeter classic timers) silently back off and under-report tail latency. See
+- **The scheduling model is the honesty ceiling.** Open-loop tools (vegeta, artillery, k6
+  arrival-rate executors, wrk2) keep firing on schedule when the target stalls, so they measure
+  overload; closed-loop tools (hey, locust, jmeter classic timers, k6 VU executors) silently back
+  off and under-report tail latency. See
   [`20-engines-and-scheduling.md`](20-engines-and-scheduling.md).
 - **The per-request path is I/O-bound in all of them.** The CPU that does exist concentrates in
   scheduling, metric reduction, serialization, and TLS — not the request loop. That is the standing
   conclusion across the per-tool docs and the cross-cutting analyses.
 - **Distribution is the next ceiling.** When one box saturates, tools either ship aggregated
   summaries to a coordinator (locust, jmeter, artillery) or stay single-process and leave fan-out
-  to the user (vegeta, hey, wrk, goose). See [`22-distributed-and-aggregation.md`](22-distributed-and-aggregation.md).
+  to the user (k6 local runner, vegeta, hey, wrk, goose). See
+  [`22-distributed-and-aggregation.md`](22-distributed-and-aggregation.md).

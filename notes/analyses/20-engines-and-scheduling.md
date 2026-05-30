@@ -10,6 +10,7 @@ and dishonest, or slower and honest.
 |---|---|---|---|
 | jmeter | thread-per-VU | one JVM thread + a deep-cloned plan subtree per VU | [`StandardJMeterEngine.java`](https://github.com/apache/jmeter/blob/rel/v5.6.3/src/core/src/main/java/org/apache/jmeter/engine/StandardJMeterEngine.java) |
 | locust | greenlet | gevent greenlet, one core, cooperative | [`locust/runners.py`](https://github.com/locustio/locust/blob/2.44.0/locust/runners.py) |
+| k6 | goroutine + JS VU | executor-owned goroutines over isolated VU runtimes | [`internal/execution/scheduler.go`](https://github.com/grafana/k6/blob/v2.0.0/internal/execution/scheduler.go) |
 | goose | tokio-task | async task on a work-stealing runtime | [`src/goose.rs`](https://github.com/tag1consulting/goose/blob/0.18.1/src/goose.rs) |
 | vegeta | goroutine (dynamic) | goroutine spawned on back-pressure | [`lib/attack.go`](https://github.com/tsenart/vegeta/blob/v12.13.0/lib/attack.go) |
 | hey | goroutine (fixed) | one of `C` goroutines | [`requester/requester.go`](https://github.com/rakyll/hey/blob/v0.1.5/requester/requester.go) |
@@ -28,8 +29,9 @@ a heavier per-VU unit.
 |---|---|---|---|---|
 | vegeta | **open** | `Pace(elapsed, hits) -> (wait, stop)`, catch-up when behind | avoided by design | [`lib/pacer.go`](https://github.com/tsenart/vegeta/blob/v12.13.0/lib/pacer.go) |
 | artillery | **open** | arrival phases (rate/ramp/count) | avoided (arrival-driven) | [`packages/core/lib/phases.js`](https://github.com/artilleryio/artillery/blob/artillery-2.0.32/packages/core/lib/phases.js) |
+| k6 | mixed | closed-loop VU/iteration executors; open-loop arrival-rate executors with preallocated/max VUs | avoided only by arrival-rate executors | [`constant_arrival_rate.go`](https://github.com/grafana/k6/blob/v2.0.0/lib/executor/constant_arrival_rate.go) |
 | wrk | closed (open in wrk2) | event loop fires on completion; `stats_correct` back-fill | corrected after the fact; wrk2 avoids it | [`src/stats.c`](https://github.com/wg/wrk/blob/4.2.0/src/stats.c) |
-| goose | closed + throttle | user loop; leaky-bucket throttle + `sleep_minus_drift` | mitigated (cadence detect + backfill) | [`src/util.rs`](https://github.com/tag1consulting/goose/blob/0.18.1/src/util.rs) |
+| goose | closed + cap | user loop; leaky-bucket request throttle + `sleep_minus_drift` | mitigated (cadence detect + backfill) | [`src/util.rs`](https://github.com/tag1consulting/goose/blob/0.18.1/src/util.rs) |
 | locust | closed | `wait_time` between tasks (`constant_pacing` → `wait=max(0, t-run)`) | not corrected (pacing collapses) | [`locust/user/task.py`](https://github.com/locustio/locust/blob/2.44.0/locust/user/task.py) |
 | hey | closed | fixed pool; optional per-worker QPS ticker | not corrected | [`requester/requester.go`](https://github.com/rakyll/hey/blob/v0.1.5/requester/requester.go) |
 | jmeter | closed (open bolted on) | timers; `PreciseThroughputTimer` / `OpenModelThreadGroup` | only in the open model | [`OpenModelThreadGroup.kt`](https://github.com/apache/jmeter/blob/rel/v5.6.3/src/core/src/main/kotlin/org/apache/jmeter/threads/openmodel/OpenModelThreadGroup.kt) |
@@ -40,6 +42,8 @@ monotonic schedule and record scheduled-vs-actual start, so they *measure* overl
 it. The reference implementation is vegeta's pure pacing function (cheap, lock-free, overflow-guarded);
 the cautionary tale is jmeter having to add an open model years after the fact.
 
-**Timing.** Every honest tool measures latency on a monotonic clock — `time.perf_counter()` (locust),
-`time.Since(began)` (vegeta/hey), `time_us()` (wrk), `Instant` (goose). Wall-clock is reserved for
-display labels, never latency.
+**Timing.** Most tools measure latency from monotonic durations — `time.perf_counter()` (locust),
+`time.Since(began)` (vegeta/hey), `time_us()` (wrk), `Instant` (goose). k6's HTTP tracer builds
+duration fields from `net/http/httptrace` hook timestamps. Wall-clock remains display metadata, not
+the scheduling source.
+→ [`tracer.go`](https://github.com/grafana/k6/blob/v2.0.0/lib/netext/httpext/tracer.go)

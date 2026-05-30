@@ -9,8 +9,9 @@ only on the exact-versus-approximate trade-off.
 
 | Tool | Structure | Memory | Exact? | Mergeable? | Record cost | Query cost |
 |---|---|---|---|---|---|---|
-| wrk | direct-indexed histogram (`data[µs]`) | linear in `timeout` | exact (µs) | no (array) | O(1) atomic add | O(limit) scan |
+| wrk | direct-indexed histogram (`data[µs]`) | linear in `timeout` | exact (µs) | yes by summing compatible arrays; wrk does not distribute them | O(1) atomic add | O(limit) scan |
 | locust | bucketed dict (`{rounded_ms: count}`), coarser as values grow | bounded | approx (rounding) | **yes** (sum buckets) | O(1) | O(buckets) |
+| k6 | typed sinks over `SampleContainer`s; `TrendSink` keeps value slices | O(n) for local trends | exact local percentiles | no local merge protocol | O(1) append/add | O(n log n) first percentile |
 | goose | `BTreeMap<usize,usize>` bucketed, adaptive rounding bands | bounded | approx (rounding), clamped to exact min/max | yes | O(log n) | O(buckets) |
 | vegeta | t-digest (compression 100) | constant | approx (~rel. error) | **yes** | O(log n) | O(1)–O(log n) |
 | artillery | DDSketch (1% relative accuracy) | bounded | approx (1% rel.) | **yes** (lossless within accuracy) | O(1) | O(1) |
@@ -19,6 +20,7 @@ only on the exact-versus-approximate trade-off.
 
 Source structures: wrk [`src/stats.h`](https://github.com/wg/wrk/blob/4.2.0/src/stats.h) ·
 locust [`locust/stats.py`](https://github.com/locustio/locust/blob/2.44.0/locust/stats.py) ·
+k6 [`metrics/sink.go`](https://github.com/grafana/k6/blob/v2.0.0/metrics/sink.go) ·
 goose [`src/metrics.rs`](https://github.com/tag1consulting/goose/blob/0.18.1/src/metrics.rs) ·
 vegeta [`lib/metrics.go`](https://github.com/tsenart/vegeta/blob/v12.13.0/lib/metrics.go) ·
 artillery [`packages/core/lib/ssms.js`](https://github.com/artilleryio/artillery/blob/artillery-2.0.32/packages/core/lib/ssms.js) ·
@@ -32,10 +34,11 @@ jmeter [`report/processor/PercentileAggregator.java`](https://github.com/apache/
 2. **Record is O(1) and off-contention.** wrk uses lock-free atomic increments; vegeta/hey/goose feed
    a single consumer; the reduction never sits behind a per-request mutex.
 3. **Reduce after merge — never average percentiles.** locust sums histogram buckets, artillery
-   merges DDSketches, vegeta merges t-digests, then computes the percentile on the combined summary.
-   Averaging two precomputed p99s is the bug this structure exists to prevent.
+   merges DDSketches, and vegeta's t-digest is a mergeable shape even though vegeta normally
+   recomputes from `Result` streams. The percentile is computed on the combined summary or stream;
+   averaging two precomputed p99s is the bug this structure exists to prevent.
 4. **Exact vs approximate is a deliberate, documented choice.** Single-process tools can stay exact
-   (wrk direct-index; hey sort). Distributed tools must use a *mergeable* summary
+   (wrk direct-index; k6 trend slice; hey sort). Distributed tools must use a *mergeable* summary
    (histogram/t-digest/DDSketch) and accept a documented tolerance — because exact distributed
    percentiles would require shipping every raw sample.
 
