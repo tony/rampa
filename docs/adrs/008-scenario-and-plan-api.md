@@ -344,7 +344,7 @@ roadmap:
   general protocol-defaults structure `base_url` is sugar over.
 - **ADR 012 — metric engine and storage, and aggregate thresholds.** Bounded, mergeable summaries;
   reduce-after-merge; and the aggregate threshold expression grammar and evaluation. Named-check
-  emission *semantics* are decided in this ADR; the aggregate threshold *language* lives here.
+  emission *semantics* are decided in this ADR; the aggregate threshold *language* lives in ADR 012.
 - **ADR 013 — scale modes and control plane.** `ExecutionDriver` modes (local, process, distributed,
   remote); deterministic partitioning; capability negotiation; start barrier; run-relative time
   model; archives; and artifacts.
