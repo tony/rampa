@@ -60,8 +60,8 @@ The default profilers add no runtime dependency. On rampa's supported Python 3.1
 stdlib sampling profiler, `python -m profiling.sampling`, is a Python 3.15+ option for attachable
 wall, CPU, and GIL-mode sampling, including baseline-diff flamegraphs
 ([`Lib/profiling/sampling/`](https://github.com/python/cpython/tree/v3.15.0a1/Lib/profiling/sampling)).
-Richer third-party tools (py-spy, austin, memray, scalene) are documented as options, never
-required to install or run the package.
+Richer third-party tools such as py-spy and memray are documented as options, never required to
+install or run the package.
 
 ### 3. Memory-growth check
 
@@ -100,7 +100,7 @@ A pull request that adds or changes a profiling workflow records:
 command:                 the documented just/script target
 scope:                   a test | a normal run | the native accelerator
 both paths:              python-only + native
-tool:                    cProfile | profiling.sampling (Python 3.15+) | py-spy | austin | memray | scalene
+tool:                    cProfile | profiling.sampling (Python 3.15+) | py-spy | memray
 overhead mode:           wall | cpu | gil
 output format:           pstats | collapsed | speedscope | gecko | flamegraph
 baseline diff:           none | diff-flamegraph vs named baseline
@@ -167,12 +167,9 @@ ADR 004 provides, and informs the per-path measurement ADR 002 requires before n
 - **orjson** (`ijl/orjson@3.11.9`) — profiling as a literal one-liner:
   [`script/profile`](https://github.com/ijl/orjson/blob/3.11.9/script/profile).
 - **Profiler tools** — py-spy ([`benfred/py-spy@v0.4.2`](https://github.com/benfred/py-spy/tree/v0.4.2),
-  attach + GIL mode + speedscope), austin
-  ([`p403n1x87/austin@v4.0.0`](https://github.com/p403n1x87/austin/tree/v4.0.0), time + memory),
-  memray ([`bloomberg/memray@v1.19.2`](https://github.com/bloomberg/memray/tree/v1.19.2)) with the
-  `limit_memory` check ([`bloomberg/pytest-memray@v1.8.0`](https://github.com/bloomberg/pytest-memray/tree/v1.8.0)),
-  and scalene ([`plasma-umass/scalene`](https://github.com/plasma-umass/scalene), no release tags;
-  line-level CPU + memory).
+  attach + GIL mode + speedscope) and memray
+  ([`bloomberg/memray@v1.19.2`](https://github.com/bloomberg/memray/tree/v1.19.2)) with the
+  `limit_memory` check ([`bloomberg/pytest-memray@v1.8.0`](https://github.com/bloomberg/pytest-memray/tree/v1.8.0)).
 - **maturin** (`PyO3/maturin@v1.13.3`) and **pydantic-core** (`pydantic/pydantic-core@v2.41.5`) —
   profiling build profile and a PGO instrument-train-rebuild loop:
   [`PyO3/maturin`](https://github.com/PyO3/maturin/tree/v1.13.3),

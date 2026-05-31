@@ -113,10 +113,9 @@ emit structured JSON for tracking; large traces, dumps, and profiler captures st
 files (per the engineering policy). pydantic disables benchmarks by default and exposes a single
 `make benchmark` ([`Makefile`](https://github.com/pydantic/pydantic-core/blob/v2.41.5/Makefile)).
 Expensive or hardware-sensitive latency runs may live in a sibling repository or behind a label,
-as Django keeps its ASV suite in an external repo triggered by a `benchmark` label
-([`docs/internals/contributing/writing-code/submitting-patches.txt`](https://github.com/django/django/blob/5.2.8/docs/internals/contributing/writing-code/submitting-patches.txt),
-[`django/django-asv`](https://github.com/django/django-asv)) and polars runs its heavy benchmarks
-on a self-hosted machine against an external dataset
+as Django documents for ASV suites triggered by a `benchmark` label
+([`docs/internals/contributing/writing-code/submitting-patches.txt`](https://github.com/django/django/blob/5.2.8/docs/internals/contributing/writing-code/submitting-patches.txt)).
+Polars runs its heavy benchmarks on a self-hosted machine against an external dataset
 ([`.github/workflows/benchmark-remote.yml`](https://github.com/pola-rs/polars/blob/rs-0.53.0/.github/workflows/benchmark-remote.yml)).
 
 ## Benchmark record
@@ -188,11 +187,10 @@ profiling used to investigate a regression these checks detect.
   [`lib/sqlalchemy/testing/profiling.py`](https://github.com/zzzeek/sqlalchemy/blob/rel_2_0_50/lib/sqlalchemy/testing/profiling.py),
   [`test/profiles.txt`](https://github.com/zzzeek/sqlalchemy/blob/rel_2_0_50/test/profiles.txt),
   [`test/aaa_profiling/`](https://github.com/zzzeek/sqlalchemy/tree/rel_2_0_50/test/aaa_profiling).
-- **Django** (`django/django@5.2.8`) — `assertNumQueries` round-trip check; ASV suite kept in an
-  external repo behind a `benchmark` label:
+- **Django** (`django/django@5.2.8`) — `assertNumQueries` round-trip check; ASV suites can run
+  behind a `benchmark` label:
   [`django/test/testcases.py`](https://github.com/django/django/blob/5.2.8/django/test/testcases.py),
-  [`docs/internals/contributing/writing-code/submitting-patches.txt`](https://github.com/django/django/blob/5.2.8/docs/internals/contributing/writing-code/submitting-patches.txt),
-  [`django/django-asv`](https://github.com/django/django-asv) (no release tags).
+  [`docs/internals/contributing/writing-code/submitting-patches.txt`](https://github.com/django/django/blob/5.2.8/docs/internals/contributing/writing-code/submitting-patches.txt).
 - **ruff** (`astral-sh/ruff@0.15.14`) — one bench source, two backends via `#[cfg(codspeed)]`;
   merge-base diff; wall-time benchmark on real projects:
   [`crates/ruff_benchmark/src/criterion.rs`](https://github.com/astral-sh/ruff/blob/0.15.14/crates/ruff_benchmark/src/criterion.rs),

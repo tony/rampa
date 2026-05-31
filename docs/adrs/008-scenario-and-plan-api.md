@@ -42,6 +42,13 @@ bound at run time, not fused into the scenario's identity.
 
 The surface has three layers. A user climbs only as far as the task requires.
 
+Progressive disclosure is a guardrail, not just an ordering for examples. Beginner-facing APIs use
+the shortest call that still states intent: `rampa.run(...)` for load scenarios, browser profiling
+shortcuts from ADR 014 for frontend probes, and `rampa.bench.run(...)` from ADR 015 for
+project-owned benchmark suites. Those calls all normalize into `Plan`, operation-attempt,
+metric-summary, adapter, and driver contracts. The lower contracts must not force simple examples
+to begin with coordinators, event records, worker protocols, or adapter descriptors.
+
 Layer 1 — script. A behavior, and one call that names the schedule:
 
 ```python
@@ -134,12 +141,12 @@ means a node or process, and the per-iteration authoring object must not share t
 **A `VU` represents a virtual user, not a single iteration.** Its state lifetime is the virtual
 user, and this differs by loop model:
 
-- In **closed-loop** schedules (`vus`, `ramping_vus`, `per_vu_iterations`, `shared_iterations`), a VU
-  persists across its iterations. Mutable VU-scoped state — an auth token fetched once, a cookie
-  jar, a protocol session — lives on the VU and survives between that VU's iterations. This is the
-  canonical pattern: authenticate once, reuse the credential for every later iteration. A
-  once-per-VU initialization, distinct from once-per-run setup, is anticipated for this; its exact
-  form is defined by ADR 010.
+- In **closed-loop** and finite schedules (`vus`, `ramping_vus`, `per_vu_iterations`,
+  `shared_iterations`, `repeat`), a VU persists across its iterations. Mutable VU-scoped state — an
+  auth token fetched once, a cookie jar, a protocol session — lives on the VU and survives between
+  that VU's iterations. This is the canonical pattern: authenticate once, reuse the credential for
+  every later iteration. A once-per-VU initialization, distinct from once-per-run setup, is
+  anticipated for this; its exact form is defined by ADR 010.
 - In **open-loop** schedules (`arrivals`, `ramping_arrivals`), the scheduler starts iterations on a
   clock independent of whether earlier iterations have finished. Whether a started iteration gets a
   fresh VU or borrows one from a pool, and the state-reuse and isolation rules when arrivals outpace
@@ -170,6 +177,7 @@ configuration dialect.
 | `ramping_vus(stages)` | closed | linear VU ramp between stage targets |
 | `per_vu_iterations(n, vus)` | closed | each VU runs exactly N iterations |
 | `shared_iterations(total, vus)` | closed | N VUs share a total iteration budget |
+| `repeat(n)` | finite diagnostic | run exactly N iterations for smoke checks, profiling, browser probes, and benchmarks |
 | `arrivals(rate, per, duration, max_vus)` | open | scenario iterations start on a schedule; overflow is recorded as dropped, not slowed |
 | `ramping_arrivals(stages, ...)` | open | scenario-iteration arrival rate interpolated between stage targets |
 
@@ -178,6 +186,11 @@ calls, WebSocket messages, sleeps, and checks. Closed-loop and open-loop are nam
 they differ in measurement honesty, not just configuration. The pacing internals — the pure-function
 pacer, drift handling, scheduled-versus-actual accounting — are deferred to ADR 010; this ADR fixes
 only the public constructors and which loop model each names.
+
+`repeat(n)` is deliberately not an offered-load model. It is the small finite schedule for examples,
+smoke checks, profile captures, browser first-paint probes, and benchmark targets that need a
+repeat count without implying VU concurrency or arrival-rate claims. ADR 010 defines its timing and
+reporting semantics.
 
 ### The Plan is the immutable, normalized contract boundary
 
@@ -274,10 +287,10 @@ result = await handle.wait()                                # final RunResult
 connect the configured outputs, wait for completion, and return a `RunResult`. `rampa.start(...)`
 exposes the streaming, controllable lifecycle directly. `LocalDriver`, `ProcessDriver`,
 `DistributedDriver`, and `RemoteDriver` satisfy this one lifecycle. The precedent worth borrowing is
-the *swappability* of a single execution interface (as in Dask's scheduler family), not its
-synchronous signature. The principle that makes swappability trustworthy is that every driver feeds
-the *same* metric path, so local and distributed runs produce the same result shape — the
-comparable-across-scale guarantee of ADR 007. `workers=20` above is illustrative; the scale
+the *swappability* of a single execution interface, not its synchronous signature. The principle
+that makes swappability trustworthy is that every driver feeds the *same* metric path, so local and
+distributed runs produce the same result shape — the comparable-across-scale guarantee of ADR 007.
+`workers=20` above is illustrative; the scale
 vocabulary (segments, regions, worker capabilities, remote pools) is richer and belongs to ADR 013,
 so `workers` is not treated as the only scale unit.
 
@@ -395,14 +408,14 @@ immediate sequence.
 
 ### Risks
 
-- **Averaged aggregates.** The AWS distributed-load-testing solution is a strong control-plane
+- **Averaged aggregates.** Distributed Load Testing on AWS (Apache-2.0) is a strong control-plane
   exemplar — archive, regional compatibility, stabilization, start markers, completion markers,
   artifacts — but its results parser averages aggregate fields, and its percentile keys fall through
   to the same arithmetic mean (the default branch of `createFinalResults` in
-  `source/results-parser/lib/parser/index.js`). Averaging precomputed percentiles is exactly the
-  reduction rampa must not adopt. The mitigation is the reduce-after-merge constraint named in
-  Measurement assumptions and bound on ADR 012, and treating the AWS solution as a control-plane
-  model only, never a metric model.
+  [`source/results-parser/lib/parser/index.js`](https://github.com/aws-solutions/distributed-load-testing-on-aws/blob/v4.1.0/source/results-parser/lib/parser/index.js)).
+  Averaging precomputed percentiles is exactly the reduction rampa must not adopt. The mitigation
+  is the reduce-after-merge constraint named in Measurement assumptions and bound on ADR 012, and
+  treating the AWS solution as a control-plane model only, never a metric model.
 - **Surface drift before the contract is whole.** The authoring API is decided before the event,
   scheduler, protocol, metric, and scale ADRs. The mitigation is the Measurement assumptions section,
   which names each downstream contract this surface depends on so the dependency is explicit rather
