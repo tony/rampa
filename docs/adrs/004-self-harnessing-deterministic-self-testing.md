@@ -60,12 +60,14 @@ through a real in-process mock server.
 See [`tests/scheduler.rs`](https://github.com/tag1consulting/goose/blob/0.18.1/tests/scheduler.rs)
 and the shared harness in [`tests/common.rs`](https://github.com/tag1consulting/goose/blob/0.18.1/tests/common.rs).
 
-### 2. Both paths, every run
+### 2. Both applicable paths
 
-The shared behavioral suite runs against both implementations via a parametrized fixture
-(`params=[python, native]`, per ADR 001 §4). CI runs the mandatory Python-only job with the
-native extension absent, alongside the native-enabled job. A green native job never substitutes
-for a green Python-only job.
+The shared behavioral suite runs against the pure-Python implementation for every public behavior.
+When a native accelerator, engine, or worker covers that same behavior, the same behavioral tests
+run against both implementations via a parametrized fixture (`params=[python, native]`, per ADR
+001 §4). CI runs the mandatory Python-only job with the native extension absent; a native-enabled
+job is required for behavior that has an applicable native path. A green native job never
+substitutes for a green Python-only job.
 
 SQLAlchemy runs its full suite both with and without its compiled C extensions on every build,
 selected by environment flags in its test plugin
@@ -117,7 +119,7 @@ A pull request that adds or changes observable load-generation behavior records:
 ```text
 test surface:            scenario | scheduler | metrics | thresholds | protocol | end-to-end
 target:                  in-process mock | loopback server | external (cite)
-both paths:              python-only run + native-enabled run (params=[python, native])
+both paths:              python-only run + native-enabled run when behavior has a native path
 asserted outcomes:       request/iteration counts | metric aggregates | threshold verdicts | errors
 clock source:            injected monotonic | frozen | real (justify)
 determinism controls:    seeded RNG | pinned ports | serialized global-state tests
@@ -129,7 +131,7 @@ negative cases:          unsupported feature rejected | invalid config | timeout
 
 ```text
 [ ] New observable behavior has an end-to-end harness assertion, not just a smoke import.
-[ ] The shared behavioral suite runs against both the pure-Python and native paths.
+[ ] The shared behavioral suite runs against the pure-Python path and every applicable native path.
 [ ] CI runs the mandatory Python-only job with native absent.
 [ ] Timing-sensitive assertions use an injected/controllable clock, not real sleeps.
 [ ] Tests that bind ports or touch global state are serialized.
