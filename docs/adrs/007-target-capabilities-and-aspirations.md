@@ -24,10 +24,12 @@ every mature tool reduces metrics with a bounded, mergeable summary.
 ## Decision
 
 rampa's vision rests on one spine: **a single contract surface, progressively disclosed across
-scale, honest about what it measures, Python-first with optional acceleration.** The same scenario
-a developer runs on a laptop runs unchanged at high throughput on one host and across a distributed
-fleet, producing comparable results. We name those scales for what they are — **single-process**,
-**multi-process**, and **distributed**.
+scale, honest about what it measures, Python-first with optional acceleration.** The same semantic
+scenario contract a developer runs on a laptop runs at high throughput on one host and across a
+distributed fleet, producing comparable results. When execution moves off-host, a driver may require
+a portable behavior reference, code bundle, environment spec, and capability check before the run
+starts. We name those scales for what they are — **single-process**, **multi-process**, and
+**distributed**.
 
 This ADR commits only to the direction and to the evidence that it is achievable. The technical
 decisions are the subject of the follow-up ADRs named throughout.
@@ -42,10 +44,12 @@ existing behavior on its own.
 
 ### 1. Progressive disclosure of scale
 
-A load test should be trivial to run on a laptop and scale — unchanged — to a high-throughput
-single host and then to a distributed fleet, with results that remain comparable across all three.
-The user names the scale (single-process, multi-process, distributed); the scenario, metrics, and
-thresholds do not change.
+A load test should be trivial to run on a laptop and scale by preserving the same semantic scenario
+contract on a high-throughput single host and then across a distributed fleet, with results that
+remain comparable across all three. The user names the scale (single-process, multi-process,
+distributed); scenario behavior, metrics, and thresholds retain the same meaning. Remote or
+distributed execution may still require a portable behavior reference, code bundle, environment
+spec, and capability check before the run starts.
 
 Achievable: locust runs the same user classes in a single process or across a ZeroMQ master/worker
 fleet — see [`locust/runners.py`](https://github.com/locustio/locust/blob/2.44.0/locust/runners.py);
@@ -55,10 +59,12 @@ artillery runs the same script locally or fanned out across AWS Lambda/Fargate.
 
 ### 2. Measurement integrity under load
 
-The numbers must stay honest when the target is overloaded — the moment they matter most. That
-means open-loop arrival modeling, monotonic timing, recording scheduled-versus-actual start time,
-and resistance to coordinated omission, so a slow target reduces neither the offered load nor the
-reported tail latency silently.
+The numbers must stay honest when the target is overloaded — the moment they matter most. For
+offered-load tests, that means open-loop arrival modeling, monotonic timing, recording
+scheduled-versus-actual start time, and resistance to coordinated omission, so a slow target
+reduces neither the offered load nor the reported tail latency silently. Closed-loop VU journeys
+remain first-class when the desired model is user-journey throughput rather than an external
+arrival process; rampa must distinguish the modes instead of blurring their semantics.
 
 Achievable: vegeta's pacer fires on a schedule independent of in-flight latency and catches up when
 behind — see [`lib/pacer.go`](https://github.com/tsenart/vegeta/blob/v12.13.0/lib/pacer.go); wrk
