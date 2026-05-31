@@ -352,6 +352,8 @@ roadmap:
 - **ADR 012 — metric engine and storage, and aggregate thresholds.** Bounded, mergeable summaries;
   reduce-after-merge; and the aggregate threshold expression grammar and evaluation. Named-check
   emission *semantics* are decided in this ADR; the aggregate threshold *language* lives in ADR 012.
+  Derived projections such as `.rate` must be defined there with an explicit denominator, time
+  window, failure classification, and distributed merge behavior.
 - **ADR 013 — scale modes and control plane.** `ExecutionDriver` modes (local, process, distributed,
   remote); deterministic partitioning; capability negotiation; start barrier; run-relative time
   model; archives; and artifacts.
