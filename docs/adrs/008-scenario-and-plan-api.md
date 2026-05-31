@@ -116,6 +116,11 @@ Schedule precedence is explicit, as three rules. A `Scenario(schedule=...)` take
 an explicit `Scenario(schedule=...)` for the same scenario is a normalization error, not a silent
 override.
 
+A top-level `run(..., schedule=...)` applies only when the input is a bare scenario or a
+single-scenario `Plan` whose scenario has no schedule. Supplying a top-level run schedule for a
+multi-scenario `Plan` is a normalization error; each scenario must carry its own schedule so load
+mixes remain explicit.
+
 ### The scenario and the VU runtime handle
 
 A scenario is an ordinary async Python function that receives an explicit `VU` runtime handle. The
