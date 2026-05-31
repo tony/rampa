@@ -76,7 +76,7 @@ plan = rampa.Plan(
     ],
     thresholds=[
         rampa.metric("http.duration").p(95) < rampa.ms(500),
-        rampa.metric("http.failed").count <= 10,
+        rampa.metric("http.failed").rate < 0.01,
     ],
     outputs=[rampa.json("results.json"), rampa.console()],
 )
@@ -238,7 +238,7 @@ surface (`rampa.metric(...).p(95) < rampa.ms(500)`); its grammar and evaluation 
 Metric names use rampa's own dotted namespace, not another tool's: `http.duration`, `http.failed`,
 `http.bytes_in`, `http.bytes_out`, `checks.passed`, `checks.failed`, `iterations.started`,
 `iterations.completed`, `iterations.dropped`, `iterations.late`. Derived ratios and rates, such as
-an HTTP failure ratio or a check pass ratio, are projections defined by ADR 012's threshold grammar;
+an HTTP failure rate or a check pass ratio, are projections defined by ADR 012's threshold grammar;
 they are not separate primary metric names in this ADR. Foreign metric names are accepted only as
 import or interop aliases, never as the documented primary names.
 
