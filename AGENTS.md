@@ -570,9 +570,9 @@ what:
 - Focused on a single topic
 ```
 
-The blank line between the `why:` block and the `what:` block is
-optional — useful when the `why:` body runs to multiple lines and the
-two sections benefit from visual separation.
+Keep the subject ≤50 chars (excluding any trailing `(#NN)` PR ref); wrap
+body lines at ≤72 chars. Separate the `why:` and `what:` blocks with a
+blank line.
 
 Common commit types:
 - **feat**: New features or enhancements
