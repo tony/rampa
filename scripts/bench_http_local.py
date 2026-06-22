@@ -18,7 +18,6 @@ from __future__ import annotations
 import asyncio
 import datetime
 import json
-import os
 import queue
 import sys
 import time
@@ -32,48 +31,7 @@ from rampa.config import ScenarioConfig
 from rampa.executors import ExecutionState
 from rampa.executors.constant_arrival_rate import ConstantArrivalRateExecutor
 from rampa.worker import Worker
-
-
-def _parse_env_float(name: str, default: float) -> float:
-    """Parse a float from an environment variable.
-
-    Parameters
-    ----------
-    name : str
-        Environment variable name.
-    default : float
-        Default value if not set.
-
-    Returns
-    -------
-    float
-        Parsed value.
-
-    >>> _parse_env_float("_MISSING", 2.0)
-    2.0
-    """
-    return float(os.environ.get(name, str(default)))
-
-
-def _parse_env_int(name: str, default: int) -> int:
-    """Parse an integer from an environment variable.
-
-    Parameters
-    ----------
-    name : str
-        Environment variable name.
-    default : int
-        Default value if not set.
-
-    Returns
-    -------
-    int
-        Parsed value.
-
-    >>> _parse_env_int("_MISSING", 5)
-    5
-    """
-    return int(os.environ.get(name, str(default)))
+from scripts._bench_common import build_env_info, parse_env_float, parse_env_int
 
 
 async def run_benchmark(
@@ -157,6 +115,7 @@ async def run_benchmark(
 
     return {
         "benchmark": "http_local",
+        "env": build_env_info(),
         "config": {
             "rate": rate,
             "duration": duration,
@@ -179,9 +138,9 @@ async def run_benchmark(
 @click.option("--ndjson", is_flag=True, help="Output as NDJSON.")
 def main(json_flag: bool, ndjson: bool) -> None:
     """Run the HTTP overhead benchmark."""
-    rate = _parse_env_float("BENCH_RATE", 100.0)
-    duration = _parse_env_float("BENCH_DURATION", 2.0)
-    max_vus = _parse_env_int("BENCH_MAX_VUS", 10)
+    rate = parse_env_float("BENCH_RATE", 100.0)
+    duration = parse_env_float("BENCH_DURATION", 2.0)
+    max_vus = parse_env_int("BENCH_MAX_VUS", 10)
 
     result = asyncio.run(run_benchmark(rate, duration, max_vus))
 

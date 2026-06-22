@@ -26,27 +26,7 @@ import click
 
 from rampa._types import MetricType, Sample
 from rampa.metrics import MetricEngine, MetricRegistry, register_builtins
-
-
-def _parse_env_int(name: str, default: int) -> int:
-    """Parse an integer from an environment variable.
-
-    Parameters
-    ----------
-    name : str
-        Environment variable name.
-    default : int
-        Default value if not set.
-
-    Returns
-    -------
-    int
-        Parsed value.
-
-    >>> _parse_env_int("_MISSING_KEY", 99)
-    99
-    """
-    return int(os.environ.get(name, str(default)))
+from scripts._bench_common import build_env_info, parse_env_int
 
 
 def run_benchmark(
@@ -101,8 +81,12 @@ def run_benchmark(
 
     engine.stop()
 
+    sub_sink_count = len(registry.all_sub_sinks())
+    base_metric_count = len(registry.all_metrics())
+
     return {
         "benchmark": "metric_engine",
+        "env": build_env_info(),
         "config": {
             "total_samples": total_samples,
             "metric_type": metric_type,
@@ -113,6 +97,8 @@ def run_benchmark(
             "push_rate": round(total_samples / push_elapsed, 1) if push_elapsed > 0 else 0.0,
             "snapshot_latency_ms": round(snap_elapsed * 1000, 3),
             "snapshot_available": snapshot is not None,
+            "sub_sink_count": sub_sink_count,
+            "base_metric_count": base_metric_count,
         },
     }
 
@@ -122,9 +108,9 @@ def run_benchmark(
 @click.option("--ndjson", is_flag=True, help="Output as NDJSON.")
 def main(json_flag: bool, ndjson: bool) -> None:
     """Run the metric engine benchmark."""
-    total = _parse_env_int("BENCH_SAMPLES", 100000)
+    total = parse_env_int("BENCH_SAMPLES", 100000)
     mt = os.environ.get("BENCH_METRIC_TYPE", "counter")
-    card = _parse_env_int("BENCH_TAG_CARDINALITY", 1)
+    card = parse_env_int("BENCH_TAG_CARDINALITY", 1)
 
     result = run_benchmark(total, mt, card)
 
