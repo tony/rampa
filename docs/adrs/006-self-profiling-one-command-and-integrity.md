@@ -19,12 +19,14 @@ distinguishing wall time from CPU time from GIL-held time, at low or zero overhe
 ## Decision
 
 Profiling rampa is one documented command away, defaults to zero-runtime-dependency standard-library
-tooling, and never distorts what a load test measures.
+tooling, and records how the selected profiling mode may affect load-test measurements.
 
 A developer can, with one command: profile a test, profile a normal run, and profile the native
 accelerator; record the result in a standard, shareable format; and be shown how to inspect it.
 The default tools add no runtime dependency. Profiling honors the measurement-integrity rules of
-ADR 003.
+ADR 003 by separating diagnostic profiles from authoritative load-test results: a profiled run is
+diagnostic by default, and may support a performance claim only when the selected low-overhead mode,
+expected overhead, and comparison baseline are recorded.
 
 ## Scope
 
@@ -58,8 +60,8 @@ The default profilers add no runtime dependency. On rampa's supported Python 3.1
 stdlib sampling profiler, `python -m profiling.sampling`, is a Python 3.15+ option for attachable
 wall, CPU, and GIL-mode sampling, including baseline-diff flamegraphs
 ([`Lib/profiling/sampling/`](https://github.com/python/cpython/tree/v3.15.0a1/Lib/profiling/sampling)).
-Richer third-party tools (py-spy, austin, memray, scalene) are documented as options, never
-required to install or run the package.
+Richer third-party tools such as py-spy and memray are documented as options, never required to
+install or run the package.
 
 ### 3. Memory-growth check
 
@@ -71,12 +73,15 @@ repeat-and-diff leak check: one bounds peak allocation, the other proves the cou
 
 ### 4. Integrity (binds ADR 003)
 
-Profiling must not change what a load test measures. Prefer low- or zero-overhead sampling, and
-keep instrumentation zero-overhead when inactive — the principle behind CPython's PEP 669
+Profiling must not masquerade as an unprofiled load test. Prefer low- or zero-overhead sampling,
+and keep instrumentation zero-overhead when inactive — the principle behind CPython's PEP 669
 `sys.monitoring`, which instruments bytecode in place and costs nothing when no tool is attached.
 The wall-vs-CPU-vs-GIL distinction is documented for every profiling mode, because for an
-I/O-bound generator a CPU profile and a wall profile answer different questions. Profile a
-release-shaped build with symbols retained rather than a slow debug build.
+I/O-bound generator a CPU profile and a wall profile answer different questions. Each profiling
+mode records expected overhead and whether captured run results are diagnostic or authoritative for
+a named performance comparison. High-overhead deterministic profilers such as `cProfile` are
+appropriate for call-shape diagnosis, but their measured latency and throughput are not load-test
+results. Profile a release-shaped build with symbols retained rather than a slow debug build.
 
 ### 5. The native path
 
@@ -95,12 +100,13 @@ A pull request that adds or changes a profiling workflow records:
 command:                 the documented just/script target
 scope:                   a test | a normal run | the native accelerator
 both paths:              python-only + native
-tool:                    cProfile | profiling.sampling (Python 3.15+) | py-spy | austin | memray | scalene
+tool:                    cProfile | profiling.sampling (Python 3.15+) | py-spy | memray
 overhead mode:           wall | cpu | gil
 output format:           pstats | collapsed | speedscope | gecko | flamegraph
 baseline diff:           none | diff-flamegraph vs named baseline
 build:                   release-shaped, symbols kept (no debug redeploy)
-integrity:               zero-overhead-when-off; does not alter measurement
+integrity:               zero-overhead-when-off; diagnostic by default unless low-overhead
+                         mode, expected overhead, and baseline make it authoritative
 ```
 
 ## Pull request checklist
@@ -110,7 +116,8 @@ integrity:               zero-overhead-when-off; does not alter measurement
 [ ] The default path uses standard-library tooling (no new runtime dependency).
 [ ] A memory-growth check guards connection / buffer / metrics paths.
 [ ] Profiling output is a standard, shareable format, and the inspect command is printed.
-[ ] Profiling does not alter what the load test measures (wall/cpu/gil documented).
+[ ] Profiling records wall/cpu/gil mode, expected overhead, and whether captured run results are
+    diagnostic or authoritative for performance claims.
 ```
 
 ## Consequences
@@ -160,12 +167,9 @@ ADR 004 provides, and informs the per-path measurement ADR 002 requires before n
 - **orjson** (`ijl/orjson@3.11.9`) — profiling as a literal one-liner:
   [`script/profile`](https://github.com/ijl/orjson/blob/3.11.9/script/profile).
 - **Profiler tools** — py-spy ([`benfred/py-spy@v0.4.2`](https://github.com/benfred/py-spy/tree/v0.4.2),
-  attach + GIL mode + speedscope), austin
-  ([`p403n1x87/austin@v4.0.0`](https://github.com/p403n1x87/austin/tree/v4.0.0), time + memory),
-  memray ([`bloomberg/memray@v1.19.2`](https://github.com/bloomberg/memray/tree/v1.19.2)) with the
-  `limit_memory` check ([`bloomberg/pytest-memray@v1.8.0`](https://github.com/bloomberg/pytest-memray/tree/v1.8.0)),
-  and scalene ([`plasma-umass/scalene`](https://github.com/plasma-umass/scalene), no release tags;
-  line-level CPU + memory).
+  attach + GIL mode + speedscope) and memray
+  ([`bloomberg/memray@v1.19.2`](https://github.com/bloomberg/memray/tree/v1.19.2)) with the
+  `limit_memory` check ([`bloomberg/pytest-memray@v1.8.0`](https://github.com/bloomberg/pytest-memray/tree/v1.8.0)).
 - **maturin** (`PyO3/maturin@v1.13.3`) and **pydantic-core** (`pydantic/pydantic-core@v2.41.5`) —
   profiling build profile and a PGO instrument-train-rebuild loop:
   [`PyO3/maturin`](https://github.com/PyO3/maturin/tree/v1.13.3),

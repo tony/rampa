@@ -26,8 +26,9 @@ throughput against a named baseline, deliberately, away from the pull-request pa
 rampa separates two activities and does not conflate them.
 
 - **Deterministic regression detection** runs on every pull request. It asserts *counts* —
-  function calls, allocations, events, connections — against a checked-in baseline. Because it
-  never reads wall-clock time, it never flakes, so it can block a merge honestly.
+  domain events, connections, and carefully scoped function calls or allocations — against a
+  checked-in baseline. Because it never reads wall-clock time, it never flakes, so it can block a
+  merge honestly.
 - **Latency and throughput measurement** runs deliberately — on a label or a schedule, on a
   controlled machine — not on every pull request. It compares against a named baseline and reports
   a geometric mean.
@@ -48,12 +49,14 @@ the benchmarks run on (ADR 004).
 ### 1. Deterministic regression detection (every pull request)
 
 The hot paths — request scheduling, per-sample metric ingestion, metric reduction — have
-assertions on **counts, not time**: function-call counts, allocation counts, and event or
-connection counts. Counts are deterministic, so a pull request can be blocked on them without
-flakiness. The baseline is **checked into the repository and keyed by both environment and
-implementation path** (whether the accelerator is present), so the pure-Python and native paths
-are checked separately, per ADR 001. A regenerate flag rewrites the baseline deliberately; the
-check fails when a count drifts beyond a documented tolerance.
+assertions on **counts, not time**. The first gates are domain counters: scheduled slots,
+operation attempts, emitted metric observations, summary merges, connection opens, and connection
+reuses. Function-call and allocation counts are still useful, but only for isolated, stable hot
+paths where interpreter noise, tool overhead, and acceptable variance are understood and reviewed.
+The baseline is **checked into the repository and keyed by both environment and implementation
+path** (whether the accelerator is present), so the pure-Python and native paths are checked
+separately, per ADR 001. A regenerate flag rewrites the baseline deliberately; the check fails when
+a count drifts beyond a documented tolerance.
 
 SQLAlchemy is the reference: `@profiling.function_call_count(variance=0.10)` runs a function
 under `cProfile`, reads `total_calls`, and fails on drift from a per-environment baseline checked
@@ -110,10 +113,9 @@ emit structured JSON for tracking; large traces, dumps, and profiler captures st
 files (per the engineering policy). pydantic disables benchmarks by default and exposes a single
 `make benchmark` ([`Makefile`](https://github.com/pydantic/pydantic-core/blob/v2.41.5/Makefile)).
 Expensive or hardware-sensitive latency runs may live in a sibling repository or behind a label,
-as Django keeps its ASV suite in an external repo triggered by a `benchmark` label
-([`docs/internals/contributing/writing-code/submitting-patches.txt`](https://github.com/django/django/blob/5.2.8/docs/internals/contributing/writing-code/submitting-patches.txt),
-[`django/django-asv`](https://github.com/django/django-asv)) and polars runs its heavy benchmarks
-on a self-hosted machine against an external dataset
+as Django documents for ASV suites triggered by a `benchmark` label
+([`docs/internals/contributing/writing-code/submitting-patches.txt`](https://github.com/django/django/blob/5.2.8/docs/internals/contributing/writing-code/submitting-patches.txt)).
+Polars runs its heavy benchmarks on a self-hosted machine against an external dataset
 ([`.github/workflows/benchmark-remote.yml`](https://github.com/pola-rs/polars/blob/rs-0.53.0/.github/workflows/benchmark-remote.yml)).
 
 ## Benchmark record
@@ -122,7 +124,9 @@ A pull request that adds or changes a benchmark, or that justifies native code, 
 
 ```text
 kind:                    deterministic regression detection (counts) | latency | throughput
-metric:                  call-count | allocation-count | event/connection-count |
+metric:                  scheduled-slot-count | operation-attempt-count |
+                         metric-observation-count | summary-merge-count |
+                         event/connection-count | call-count | allocation-count |
                          instruction-count | wall-time
 baseline:                trunk | merge-base | tag | release (named)
 both paths:              python-only + native, keyed separately
@@ -137,7 +141,8 @@ artifacts:               JSON results; large traces kept out of the tree
 
 ```text
 [ ] Native code (if any) is justified by a latency-or-throughput measurement of the user-visible path vs a named baseline.
-[ ] Hot-path changes have deterministic count assertions (function calls / allocations / events / connections).
+[ ] Hot-path changes have deterministic domain-count assertions; function-call or allocation
+    counters are scoped to stable hot paths with reviewed tolerances.
 [ ] The count baseline is checked in and keyed by environment and by whether the accelerator is present.
 [ ] Latency / throughput runs name their baseline and report a geometric mean with reproducibility controls.
 [ ] Benchmarks are disabled by default and runnable in one command.
@@ -182,11 +187,10 @@ profiling used to investigate a regression these checks detect.
   [`lib/sqlalchemy/testing/profiling.py`](https://github.com/zzzeek/sqlalchemy/blob/rel_2_0_50/lib/sqlalchemy/testing/profiling.py),
   [`test/profiles.txt`](https://github.com/zzzeek/sqlalchemy/blob/rel_2_0_50/test/profiles.txt),
   [`test/aaa_profiling/`](https://github.com/zzzeek/sqlalchemy/tree/rel_2_0_50/test/aaa_profiling).
-- **Django** (`django/django@5.2.8`) — `assertNumQueries` round-trip check; ASV suite kept in an
-  external repo behind a `benchmark` label:
+- **Django** (`django/django@5.2.8`) — `assertNumQueries` round-trip check; ASV suites can run
+  behind a `benchmark` label:
   [`django/test/testcases.py`](https://github.com/django/django/blob/5.2.8/django/test/testcases.py),
-  [`docs/internals/contributing/writing-code/submitting-patches.txt`](https://github.com/django/django/blob/5.2.8/docs/internals/contributing/writing-code/submitting-patches.txt),
-  [`django/django-asv`](https://github.com/django/django-asv) (no release tags).
+  [`docs/internals/contributing/writing-code/submitting-patches.txt`](https://github.com/django/django/blob/5.2.8/docs/internals/contributing/writing-code/submitting-patches.txt).
 - **ruff** (`astral-sh/ruff@0.15.14`) — one bench source, two backends via `#[cfg(codspeed)]`;
   merge-base diff; wall-time benchmark on real projects:
   [`crates/ruff_benchmark/src/criterion.rs`](https://github.com/astral-sh/ruff/blob/0.15.14/crates/ruff_benchmark/src/criterion.rs),
