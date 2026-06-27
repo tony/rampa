@@ -101,6 +101,7 @@ cache-keys = [
 
 [tool.uv.exclude-newer-package]
 gp-furo-theme = false
+gp-libs = false
 gp-sphinx = false
 sphinx-autodoc-api-style = false
 sphinx-autodoc-argparse = false
