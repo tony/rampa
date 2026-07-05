@@ -1,3 +1,5 @@
+(adr-001-pure-python-rust-accelerator-module-compatibility-requirements)=
+
 # ADR 001: Pure Python/Rust Accelerator Module Compatibility Requirements
 
 Status: Accepted

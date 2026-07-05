@@ -68,7 +68,9 @@ GitHub Actions artifacts, result comparison, and benchmarking.
 :::{grid-item-card} API Reference
 :link: reference
 :link-type: doc
-Public API: Engine, RunController, Worker, Config.
+Public API: {class}`~rampa.engine.Engine`,
+{class}`~rampa.engine.RunController`, {class}`~rampa.worker.Worker`,
+{class}`~rampa.config.Config`.
 :::
 
 ::::

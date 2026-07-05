@@ -1,3 +1,5 @@
+(adr-005-self-benchmarking-baselines-and-regression-detection)=
+
 # ADR 005: Self-Benchmarking — Baselines and Regression Detection
 
 Status: Proposed

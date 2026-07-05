@@ -56,14 +56,15 @@ User script (@scenario)
            SinkProtocol ──→ Thresholds ──→ exit code
 ```
 
-The engine is headless — it owns execution and cleanup. Frontends
-own presentation, format, and exit behavior. The `EventBus`
-broadcasts typed events to concurrent subscribers.
+The {class}`~rampa.engine.Engine` is headless — it owns execution and
+cleanup. Frontends own presentation, format, and exit behavior. The
+{class}`~rampa.bus.EventBus` broadcasts typed events to concurrent
+subscribers.
 
-The metric engine runs in a dedicated `threading.Thread`, draining
-samples from a `queue.SimpleQueue` on a 50ms timer. The
-`SinkProtocol` is a structural protocol (not ABC) designed as the
-future Rust/PyO3 seam.
+The {class}`~rampa.metrics.MetricEngine` runs in a dedicated
+{class}`threading.Thread`, draining samples from a {class}`queue.SimpleQueue`
+on a 50ms timer. The {class}`~rampa.metrics.SinkProtocol` is a structural
+protocol (not ABC) designed as the future Rust/PyO3 seam.
 
 ::::{grid} 1 1 2 2
 :gutter: 2

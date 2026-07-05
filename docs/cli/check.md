@@ -35,7 +35,7 @@ status: valid
 ## What it checks
 
 - Script imports and loads without errors
-- `@scenario` decorators are discovered
+- {func}`~rampa.loader.scenario` decorators are discovered
 - Executor names are valid (with fuzzy suggestions for typos)
 - Setup and teardown functions are detected
 - Threshold expressions are listed

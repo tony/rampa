@@ -1,3 +1,5 @@
+(adr-002-native-boundary-and-execution-architecture)=
+
 # ADR 002: Native Boundary and Execution Architecture
 
 Status: Proposed

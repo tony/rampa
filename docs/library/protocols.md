@@ -3,7 +3,7 @@
 # Protocol clients
 
 rampa provides protocol-specific clients that auto-emit metrics.
-Each client is lazily initialized via a Worker property.
+Each client is lazily initialized via a {class}`~rampa.worker.Worker` property.
 
 ## HTTP (built-in)
 

@@ -48,9 +48,11 @@ def test_api_performance(rampa_result: RunResult) -> None:
     assert rampa_result.status == RunStatus.PASSED
 ```
 
-## Marker: `@pytest.mark.rampa_scenario`
+(pytest-scenario-marker)=
 
-The marker accepts the same keyword arguments as
+## Scenario marker
+
+The `@pytest.mark.rampa_scenario` marker accepts the same keyword arguments as
 {class}`~rampa.config.ScenarioConfig` plus:
 
 | Kwarg | Type | Description |

@@ -7,8 +7,8 @@ complete test with checks, thresholds, and structured output.
 
 ## Minimal scenario
 
-A rampa scenario is an async function decorated with `@rampa.scenario`.
-It receives a {class}`~rampa.Worker` and runs one iteration of your
+A rampa scenario is an async function decorated with {func}`~rampa.loader.scenario`.
+It receives a {class}`~rampa.worker.Worker` and runs one iteration of your
 workload.
 
 ```python

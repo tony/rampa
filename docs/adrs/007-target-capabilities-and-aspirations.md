@@ -1,3 +1,5 @@
+(adr-007-target-capabilities-and-aspirations)=
+
 # ADR 007: Target Capabilities and Architecture Aspirations
 
 Status: Proposed

@@ -149,6 +149,9 @@ Payload shape:
 
 ## Programmatic usage
 
+Use {func}`~rampa.outputs.get_output` to resolve backend names in
+programmatic runners.
+
 ```python
 from rampa.outputs import get_output
 

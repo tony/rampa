@@ -2,7 +2,7 @@
 
 # rampa
 
-Async Python load testing, inspired by k6.
+Async Python load testing, inspired by [k6](https://k6.io/).
 
 Write an async scenario function, run it, get request metrics with
 percentiles, checks, thresholds, and correct exit codes.
@@ -43,7 +43,7 @@ Write and run your first scenario in 60 seconds.
 :::{grid-item-card} CLI
 :link: cli/index
 :link-type: doc
-`rampa run`, `rampa check`, `rampa doctor` from the terminal.
+{doc}`cli/run`, {doc}`cli/check`, and {doc}`cli/doctor` from the terminal.
 :::
 
 :::{grid-item-card} Library
@@ -55,7 +55,8 @@ Executors, metrics, thresholds, and the Python API.
 :::{grid-item-card} pytest
 :link: pytest/index
 :link-type: doc
-Run load tests inside your test suite with `@pytest.mark.rampa_scenario`.
+Run load tests inside your test suite with the
+{ref}`pytest scenario marker <pytest-scenario-marker>`.
 :::
 
 :::{grid-item-card} MCP
@@ -109,13 +110,14 @@ Threshold breaches produce exit code 1 for CI integration.
 
 ### Multiple frontends and outputs
 
-- **CLI** — `rampa run` with `--progress` live status or `--tui` dashboard
-- **TUI** — interactive Textual dashboard with live metrics and keyboard control
-- **pytest plugin** — `@pytest.mark.rampa_scenario` for test suites
-- **unittest mixin** — `RampaTestCase` for unittest integration
-- **MCP server** — `rampa-mcp` for AI agent integration
-- **Output backends** — JSON, CSV, GitHub Actions, InfluxDB, Prometheus, OTEL, webhooks via `--output`
-- **CI comparison** — `python -m rampa.ci.compare` for benchmark diffs
+- **CLI** — {doc}`cli/run` with `--progress` live status or `--tui` dashboard
+- **TUI** — {doc}`library/tui` with live metrics and keyboard control
+- **pytest plugin** — {doc}`pytest/index` with the {ref}`pytest scenario marker <pytest-scenario-marker>`
+- **unittest mixin** — {class}`~rampa.unittest_plugin.RampaTestCase` for
+  unittest integration
+- **MCP server** — {doc}`mcp/index` for AI agent integration
+- **Output backends** — {doc}`library/outputs` via `--output`
+- **CI comparison** — {mod}`rampa.ci.compare` for benchmark diffs
 
 ```{toctree}
 :hidden:

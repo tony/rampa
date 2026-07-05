@@ -1,3 +1,5 @@
+(adr-006-self-profiling-one-command-and-integrity)=
+
 # ADR 006: Self-Profiling — One Command Away and Load-Test Integrity
 
 Status: Proposed

@@ -1,3 +1,5 @@
+(adr-004-self-harnessing-deterministic-self-testing)=
+
 # ADR 004: Self-Harnessing — Deterministic Self-Testing of the Load Generator
 
 Status: Proposed

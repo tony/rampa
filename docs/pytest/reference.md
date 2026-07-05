@@ -15,6 +15,13 @@
    :no-index:
 ```
 
+## unittest integration
+
+```{eval-rst}
+.. autoclass:: rampa.unittest_plugin.RampaTestCase
+   :members:
+```
+
 ## Internal
 
 ```{eval-rst}
