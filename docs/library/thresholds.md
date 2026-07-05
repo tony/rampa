@@ -34,6 +34,9 @@ Put threshold expressions in a module-level
 {class}`~rampa.config.Config`:
 
 ```python
+import rampa
+
+
 config = rampa.Config(
     thresholds={
         "http_req_duration": [

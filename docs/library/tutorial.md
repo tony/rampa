@@ -25,9 +25,13 @@ async def default(worker: rampa.Worker) -> None:
 $ rampa run load_test.py
 ```
 
+If this covers your test, you can stop here. The rest of the tutorial
+adds HTTP metrics, checks, thresholds, and multi-scenario structure.
+
 ## HTTP requests
 
-The worker provides an HTTP client that auto-emits timing metrics:
+The worker provides {attr}`~rampa.worker.Worker.http`, an HTTP client
+that auto-emits timing metrics:
 
 ```python
 @rampa.scenario(executor="constant-vus", vus=5, duration="30s")
@@ -40,8 +44,8 @@ data transfer counters, and per-phase timing metrics automatically.
 
 ## Checks
 
-Checks validate response properties. Each condition emits a pass/fail
-sample on the `checks` metric:
+{meth}`~rampa.worker.Worker.check` validates response properties. Each
+condition emits a pass/fail sample on the `checks` metric:
 
 ```python
 @rampa.scenario(executor="constant-vus", vus=5, duration="30s")
@@ -55,7 +59,8 @@ async def default(worker: rampa.Worker) -> None:
 
 ## Thresholds
 
-Thresholds define pass/fail criteria. A breach produces exit code 1:
+{class}`~rampa.config.Config` thresholds define pass/fail criteria. A
+breach produces exit code 1:
 
 ```python
 config = rampa.Config(
@@ -69,7 +74,10 @@ config = rampa.Config(
 
 ## Custom metrics
 
-Emit your own counters, gauges, and trends:
+Emit your own counters, gauges, and trends with
+{meth}`~rampa.worker.Worker.counter`,
+{meth}`~rampa.worker.Worker.gauge`, and
+{meth}`~rampa.worker.Worker.trend`:
 
 ```python
 @rampa.scenario(executor="constant-vus", vus=5, duration="30s")

@@ -56,6 +56,7 @@ conf["fastmcp_server_module"] = "rampa.mcp.server:build_mcp_server"
 # Safety badges on tool sections
 conf["fastmcp_section_badge_map"] = {
     "Run Lifecycle": "mutating",
+    "Discovery": "readonly",
     "Metrics": "readonly",
     "Thresholds": "readonly",
 }

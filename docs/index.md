@@ -4,7 +4,8 @@
 
 Async Python load testing, inspired by [k6](https://k6.io/).
 
-Write an async scenario function, run it, get request metrics with
+Write a {func}`~rampa.loader.scenario` function that receives a
+{class}`~rampa.worker.Worker`, run it, get request metrics with
 percentiles, checks, thresholds, and correct exit codes.
 
 ```{cli-install}
@@ -30,6 +31,9 @@ async def default(worker: rampa.Worker) -> None:
 ```console
 $ rampa run load_test.py
 ```
+
+If that is all you need, you can stop here. The rest of the docs help
+you tune scheduling, thresholds, outputs, and programmatic control.
 
 ::::{grid} 1 1 2 3
 :gutter: 2 2 3 3

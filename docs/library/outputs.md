@@ -39,7 +39,7 @@ Multiple outputs in one run:
 ```console
 $ rampa run load_test.py \
   --output csv=results.csv \
-  --output influxdb=http://localhost:8086/api/v2/write?org=myorg&bucket=rampa
+  --output 'influxdb=http://localhost:8086/api/v2/write?org=myorg&bucket=rampa'
 ```
 
 The `--out` flag is shorthand for `--output json=<path>`.
@@ -78,7 +78,7 @@ Pushes samples as [line protocol](https://docs.influxdata.com/influxdb/v2/refere
 
 ```console
 $ rampa run load_test.py \
-  --output influxdb=http://localhost:8086/api/v2/write?org=myorg&bucket=rampa
+  --output 'influxdb=http://localhost:8086/api/v2/write?org=myorg&bucket=rampa'
 ```
 
 Each sample becomes one line:
@@ -160,4 +160,6 @@ influx_out = get_output("influxdb", "http://localhost:8086/api/v2/write")
 ```
 
 All outputs implement the {class}`~rampa.output.Output` protocol:
-`start()`, `add_samples(batch)`, `stop(error)`.
+{meth}`~rampa.output.Output.start`,
+{meth}`~rampa.output.Output.add_samples`, and
+{meth}`~rampa.output.Output.stop`.

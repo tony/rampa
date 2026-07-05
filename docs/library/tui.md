@@ -36,16 +36,22 @@ The dashboard shows:
 
 rampa offers three levels of live output:
 
-```console
-$ rampa run load_test.py                # Console summary after completion
-```
+Use the console summary when you only need final results:
 
 ```console
-$ rampa run load_test.py --progress     # Single-line live status on stderr
+$ rampa run load_test.py
 ```
 
+Use progress output when you want a single live status line on stderr:
+
 ```console
-$ rampa run load_test.py --tui          # Full interactive dashboard
+$ rampa run load_test.py --progress
+```
+
+Use the TUI when you want a full interactive dashboard:
+
+```console
+$ rampa run load_test.py --tui
 ```
 
 The `--progress` flag requires no additional dependencies.

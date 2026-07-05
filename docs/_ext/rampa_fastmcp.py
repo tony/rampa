@@ -71,6 +71,42 @@ t.cast(t.Any, stop_run).__fastmcp__ = types.SimpleNamespace(
 )
 
 
+async def pause_run(
+    run_id: t.Annotated[
+        str,
+        Field(description="The run identifier."),
+    ],
+) -> dict[str, str]:
+    """Pause a running load test."""
+    raise NotImplementedError(DOCS_ONLY_MESSAGE)
+
+
+t.cast(t.Any, pause_run).__fastmcp__ = types.SimpleNamespace(
+    name="pause_run",
+    title="Pause Run",
+    tags=MUTATING_TAGS | {"lifecycle"},
+    annotations=None,
+)
+
+
+async def resume_run(
+    run_id: t.Annotated[
+        str,
+        Field(description="The run identifier."),
+    ],
+) -> dict[str, str]:
+    """Resume a paused load test."""
+    raise NotImplementedError(DOCS_ONLY_MESSAGE)
+
+
+t.cast(t.Any, resume_run).__fastmcp__ = types.SimpleNamespace(
+    name="resume_run",
+    title="Resume Run",
+    tags=MUTATING_TAGS | {"lifecycle"},
+    annotations=None,
+)
+
+
 async def get_status(
     run_id: t.Annotated[
         str,
@@ -98,6 +134,42 @@ t.cast(t.Any, list_runs).__fastmcp__ = types.SimpleNamespace(
     name="list_runs",
     title="List Runs",
     tags=READONLY_TAGS | {"lifecycle"},
+    annotations=None,
+)
+
+
+async def discover_scenarios(
+    script_path: t.Annotated[
+        str,
+        Field(description="Path to the test script."),
+    ],
+) -> dict[str, t.Any]:
+    """Load a script and return its scenarios without running."""
+    raise NotImplementedError(DOCS_ONLY_MESSAGE)
+
+
+t.cast(t.Any, discover_scenarios).__fastmcp__ = types.SimpleNamespace(
+    name="discover_scenarios",
+    title="Discover Scenarios",
+    tags=READONLY_TAGS | {"discovery"},
+    annotations=None,
+)
+
+
+async def inspect_config(
+    script_path: t.Annotated[
+        str,
+        Field(description="Path to the test script."),
+    ],
+) -> dict[str, t.Any]:
+    """Return the fully resolved configuration for a script."""
+    raise NotImplementedError(DOCS_ONLY_MESSAGE)
+
+
+t.cast(t.Any, inspect_config).__fastmcp__ = types.SimpleNamespace(
+    name="inspect_config",
+    title="Inspect Config",
+    tags=READONLY_TAGS | {"discovery"},
     annotations=None,
 )
 

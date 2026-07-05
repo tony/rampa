@@ -8,7 +8,7 @@ structured output for scripts and CI.
 ```{cli-install}
 ```
 
-::::{grid} 1 2 2 4
+::::{grid} 1 2 3 5
 :gutter: 2 2 3 3
 
 :::{grid-item-card} rampa run
@@ -21,6 +21,12 @@ Execute a load test script with metric output and exit codes.
 :link: check
 :link-type: doc
 Validate a script without running it.
+:::
+
+:::{grid-item-card} rampa inspect
+:link: inspect
+:link-type: doc
+Show resolved configuration without running a script.
 :::
 
 :::{grid-item-card} rampa doctor
@@ -42,6 +48,7 @@ Auto-generated reference for all commands and options.
 
 run
 check
+inspect
 doctor
 reference
 ```

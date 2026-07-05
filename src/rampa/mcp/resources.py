@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import typing as t
 
+from rampa.events import serialize_event
 from rampa.mcp.tools.runs import get_registry
 
 if t.TYPE_CHECKING:
@@ -136,8 +137,5 @@ def register(mcp: FastMCP) -> None:
         record = registry.get(run_id)
         if record is None:
             return json.dumps({"error": f"run {run_id!r} not found"})
-        events = [
-            {"type": type(e).__name__, "run_id": e.run_id, "timestamp_ns": e.timestamp_ns}
-            for e in record.events
-        ]
+        events = [serialize_event(event) for event in record.events]
         return json.dumps({"run_id": run_id, "events": events}, indent=2)

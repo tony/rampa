@@ -2,8 +2,8 @@
 
 # MCP Server
 
-The `rampa-mcp` server lets AI agents start, stop, and query load
-tests via the Model Context Protocol.
+The `rampa-mcp` server lets AI agents inspect, start, control, and
+query load tests via the Model Context Protocol.
 
 ```{mcp-install}
 ```
@@ -14,7 +14,7 @@ tests via the Model Context Protocol.
 :::{grid-item-card} Tools
 :link: tools
 :link-type: doc
-Start, stop, and query load test runs.
+Inspect scripts, control runs, and query load test results.
 :::
 
 :::{grid-item-card} Resources
@@ -36,7 +36,12 @@ Server factory, run registry, and models.
 ### Load Testing
 
 Start and manage load test runs from AI agents.
-{ref}`fastmcp-tool-start-run` · {ref}`fastmcp-tool-stop-run` · {ref}`fastmcp-tool-get-status` · {ref}`fastmcp-tool-list-runs`
+{ref}`fastmcp-tool-start-run` · {ref}`fastmcp-tool-stop-run` · {ref}`fastmcp-tool-pause-run` · {ref}`fastmcp-tool-resume-run` · {ref}`fastmcp-tool-get-status` · {ref}`fastmcp-tool-list-runs`
+
+### Discovery
+
+Inspect scripts before you run them.
+{ref}`fastmcp-tool-discover-scenarios` · {ref}`fastmcp-tool-inspect-config`
 
 ### Observability
 

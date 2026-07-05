@@ -45,5 +45,4 @@ status: valid
 | Code | Meaning |
 |------|---------|
 | 0 | Script is valid |
-| 1 | Validation error (no scenarios, bad executor, import failure) |
-| 2 | File not found |
+| 1 | Validation error, import failure, or file not found |

@@ -40,11 +40,8 @@ total worker count.
 ## Test archives
 
 Self-contained `.rampa` zip bundles contain everything a remote
-worker needs:
-
-```console
-$ rampa archive create load_test.py -o test.rampa
-```
+worker needs. Archive creation is currently a programmatic API for
+coordinators and launchers, not a CLI command.
 
 Contents: script, data files, `requirements.txt`, `manifest.json`.
 Archives are input bundles, not result stores. In a distributed run, the
@@ -61,7 +58,7 @@ For programmatic use,
 from rampa.distributed.archive import create_archive, extract_archive
 
 create_archive("load_test.py", "test.rampa", requirements=["aiohttp>=3.9"])
-manifest = extract_archive("test.rampa", "/tmp/work")
+manifest = extract_archive("test.rampa", "worker-dir")
 ```
 
 ## Wire protocol
