@@ -47,6 +47,9 @@
 ## Metrics
 
 ```{eval-rst}
+.. automodule:: rampa._types
+   :members: Sample, MetricType, ValueType, make_sample
+
 .. automodule:: rampa.metrics
    :members: MetricSnapshot, MetricRegistry, MetricEngine, SinkProtocol
 ```
@@ -61,6 +64,16 @@
    :members:
 
 .. autofunction:: rampa.outputs.get_output
+```
+
+## Protocol Clients
+
+```{eval-rst}
+.. automodule:: rampa.protocols.websocket
+   :members: WebSocketClient, WebSocketSession
+
+.. automodule:: rampa.protocols.grpc
+   :members: GrpcClient, GrpcResponse
 ```
 
 ## Thresholds

@@ -60,8 +60,10 @@ The `@pytest.mark.rampa_scenario` marker accepts the same keyword arguments as
 | `worker_fn` | async callable | The scenario function (required) |
 | `thresholds` | dict | Threshold expressions per metric |
 
-All `ScenarioConfig` fields work: `executor`, `vus`, `duration`,
-`iterations`, `stages`, `rate`, `max_vus`.
+All {class}`~rampa.config.ScenarioConfig` fields work: `executor`,
+`vus`, `duration`, `iterations`, `stages`, `rate`, `time_unit`,
+`pre_allocated_vus`, `max_vus`, `exec_fn`, `start_time`,
+`graceful_stop`, `tags`, and `env`.
 
 ## Complete example
 

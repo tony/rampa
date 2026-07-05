@@ -32,6 +32,9 @@ capacity is exhausted, the iteration is counted as `dropped_iterations`.
 Run a fixed number of VUs for a duration.
 
 ```python
+import rampa
+
+
 @rampa.scenario(executor="constant-vus", vus=10, duration="30s")
 async def default(worker: rampa.Worker) -> None:
     await worker.http.get("https://api.example.com/data")
@@ -42,6 +45,9 @@ async def default(worker: rampa.Worker) -> None:
 Linearly interpolate VU count between stages.
 
 ```python
+import rampa
+
+
 @rampa.scenario(
     executor="ramping-vus",
     stages=[
@@ -59,6 +65,9 @@ async def default(worker: rampa.Worker) -> None:
 N VUs share a pool of M total iterations.
 
 ```python
+import rampa
+
+
 @rampa.scenario(
     executor="shared-iterations",
     vus=10,
@@ -73,6 +82,9 @@ async def default(worker: rampa.Worker) -> None:
 Each VU runs exactly N iterations independently.
 
 ```python
+import rampa
+
+
 @rampa.scenario(
     executor="per-vu-iterations",
     vus=10,
@@ -88,6 +100,9 @@ Maintain a fixed request rate. Iterations that cannot start (all VUs
 busy) are counted as `dropped_iterations`.
 
 ```python
+import rampa
+
+
 @rampa.scenario(
     executor="constant-arrival-rate",
     rate=100,
@@ -104,6 +119,9 @@ async def default(worker: rampa.Worker) -> None:
 Ramp the request rate linearly through stages.
 
 ```python
+import rampa
+
+
 @rampa.scenario(
     executor="ramping-arrival-rate",
     stages=[

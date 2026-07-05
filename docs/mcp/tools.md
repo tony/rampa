@@ -2,10 +2,11 @@
 
 # Tools
 
-The rampa MCP server provides six tools for load test lifecycle
-management, metric retrieval, and threshold evaluation.
+The rampa MCP server provides ten tools for load test lifecycle
+management, scenario discovery, metric retrieval, and threshold
+evaluation.
 
-::::{grid} 1 2 3 3
+::::{grid} 1 2 3 5
 :gutter: 2 2 3 3
 
 :::{grid-item-card} Start Run
@@ -20,6 +21,18 @@ Start a new load test from a script path.
 Gracefully stop a running test.
 :::
 
+:::{grid-item-card} Pause Run
+:link: fastmcp-tool-pause-run
+:link-type: ref
+Pause a running test before the next iteration.
+:::
+
+:::{grid-item-card} Resume Run
+:link: fastmcp-tool-resume-run
+:link-type: ref
+Resume a paused test.
+:::
+
 :::{grid-item-card} Get Status
 :link: fastmcp-tool-get-status
 :link-type: ref
@@ -30,6 +43,18 @@ Poll whether a run is active or completed.
 :link: fastmcp-tool-list-runs
 :link-type: ref
 List all active and completed runs.
+:::
+
+:::{grid-item-card} Discover Scenarios
+:link: fastmcp-tool-discover-scenarios
+:link-type: ref
+Inspect scenarios without starting a run.
+:::
+
+:::{grid-item-card} Inspect Config
+:link: fastmcp-tool-inspect-config
+:link-type: ref
+Show resolved configuration without starting a run.
 :::
 
 :::{grid-item-card} Get Metrics
@@ -66,6 +91,22 @@ run returns `already_completed`.
 ```{fastmcp-tool-input} stop_run
 ```
 
+```{fastmcp-tool} pause_run
+```
+
+Pause a running test. Executors block before the next iteration.
+
+```{fastmcp-tool-input} pause_run
+```
+
+```{fastmcp-tool} resume_run
+```
+
+Resume a paused test.
+
+```{fastmcp-tool-input} resume_run
+```
+
 ```{fastmcp-tool} get_status
 ```
 
@@ -79,6 +120,26 @@ Poll whether a run is still active or has completed.
 
 List all active and completed runs with their `run_id`, `status`,
 and `script_path`.
+
+## Discovery
+
+```{fastmcp-tool} discover_scenarios
+```
+
+Load a script and list its scenarios, thresholds, and lifecycle hooks
+without starting a run.
+
+```{fastmcp-tool-input} discover_scenarios
+```
+
+```{fastmcp-tool} inspect_config
+```
+
+Show the fully resolved test configuration for a script without
+starting a run.
+
+```{fastmcp-tool-input} inspect_config
+```
 
 ## Metrics
 

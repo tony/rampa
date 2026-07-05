@@ -3,11 +3,18 @@
 # Protocol clients
 
 rampa provides protocol-specific clients that auto-emit metrics.
-Each client is lazily initialized via a {class}`~rampa.worker.Worker` property.
+Each client is lazily initialized via a {class}`~rampa.worker.Worker`
+property.
 
 ## HTTP (built-in)
 
+Use {attr}`~rampa.worker.Worker.http` for HTTP requests through
+{class}`~rampa.http.HttpClient`:
+
 ```python
+import rampa
+
+
 @rampa.scenario(vus=10, duration="30s")
 async def default(worker: rampa.Worker) -> None:
     resp = await worker.http.get("https://example.com/api")
@@ -18,7 +25,13 @@ Metrics: `http_reqs`, `http_req_duration`, `http_req_failed`, phase timings.
 
 ## WebSocket (built-in)
 
+Use {attr}`~rampa.worker.Worker.ws` for WebSocket sessions through
+{class}`~rampa.protocols.websocket.WebSocketClient`:
+
 ```python
+import rampa
+
+
 @rampa.scenario(vus=50, duration="1m")
 async def websocket_load(worker: rampa.Worker) -> None:
     async with worker.ws.connect("wss://echo.example.com") as session:
@@ -34,7 +47,13 @@ Metrics: `ws_sessions`, `ws_connecting`, `ws_session_duration`,
 
 Install: `pip install rampa[grpc]`
 
+Use {attr}`~rampa.worker.Worker.grpc` for unary and streaming calls
+through {class}`~rampa.protocols.grpc.GrpcClient`:
+
 ```python
+import rampa
+
+
 @rampa.scenario(vus=20, duration="30s")
 async def grpc_load(worker: rampa.Worker) -> None:
     resp = await worker.grpc.unary(
@@ -48,7 +67,8 @@ async def grpc_load(worker: rampa.Worker) -> None:
 Metrics: `grpc_reqs`, `grpc_req_duration`, `grpc_req_failed`,
 `grpc_streams_opened`, `grpc_messages_received`.
 
-Supports `unary()` and `server_stream()` call patterns.
+Supports {meth}`~rampa.protocols.grpc.GrpcClient.unary` and
+{meth}`~rampa.protocols.grpc.GrpcClient.server_stream` call patterns.
 
 ## Custom protocols
 
@@ -56,10 +76,14 @@ For protocols without a built-in client, use raw async code with
 custom metric emission:
 
 ```python
+import asyncio
+import time
+
+import rampa
+
+
 @rampa.scenario(vus=10, duration="30s")
 async def tcp_load(worker: rampa.Worker) -> None:
-    import asyncio, time
-
     start = time.monotonic()
     reader, writer = await asyncio.open_connection("localhost", 9999)
     worker.trend("tcp_connect", (time.monotonic() - start) * 1000)

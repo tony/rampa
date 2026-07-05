@@ -41,9 +41,8 @@ $ rampa run load_test.py
 
 ```python
 import rampa
-from rampa import Config, Scenario
 
-config = Config(
+config = rampa.Config(
     scenarios={
         "load": rampa.ScenarioConfig(
             executor="ramping-arrival-rate",
@@ -62,7 +61,7 @@ config = Config(
 )
 
 
-async def setup() -> dict:
+async def setup() -> dict[str, str]:
     return {"base_url": "https://staging.example.com"}
 
 
@@ -84,8 +83,9 @@ For programmatic use (pytest, TUI, MCP, CI):
 ```python
 import asyncio
 import rampa
+from rampa.loader import load_test
 
-plan = rampa.loader.load_test("load_test.py")
+plan = load_test("load_test.py")
 controller = await rampa.Engine(plan).start()
 
 # Poll metrics while running
@@ -106,7 +106,8 @@ $ rampa run script.py --vus 10 --duration 30s --out result.json
 ```
 
 Exit codes: 0 = passed, 1 = threshold failed, 2 = iteration error,
-3 = invalid config, 4 = aborted, 5 = setup failure.
+3 = invalid config, 4 = aborted, 5 = setup failure, 6 = output
+failure, 7 = teardown failure.
 
 ## Executors
 

@@ -63,10 +63,12 @@ advanced one.
 
 ## Keeping examples honest
 
-Nothing under `docs/` executes: pytest's `testpaths` covers
-`src/rampa` and `tests`, so a drifted example fails no build and no
-test. Correctness is manual — run every new or changed example
-against the current public API before you commit.
+Most pages under `docs/` do not execute automatically. The curated
+examples in `tests/test_docs_examples.py` do run under pytest, and the
+contract checks in `tests/test_docs_contracts.py` pin selected docs to
+the current public API. Everything outside that curated set is still
+manual — run every new or changed example against the current public
+API before you commit.
 
 - Prefer complete scripts a reader can paste into `load_test.py` and
   run with `rampa run`; a fragment that assumes an invisible import or
