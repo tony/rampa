@@ -23,8 +23,8 @@ test locally, and stream samples back.
 
 ## Execution segments
 
-Work is deterministically partitioned across workers without central
-assignment:
+Use {class}`~rampa.distributed.segment.ExecutionSegment` to partition
+work deterministically across workers without central assignment:
 
 ```python
 from rampa.distributed.segment import ExecutionSegment
@@ -51,6 +51,11 @@ Archives are input bundles, not result stores. In a distributed run, the
 coordinator aggregates worker samples and output backends decide where
 results are retained: local JSON/CSV artifacts, remote metric stores, CI
 summaries, or custom ingestion.
+
+For programmatic use,
+{func}`~rampa.distributed.archive.create_archive` builds the bundle and
+{func}`~rampa.distributed.archive.extract_archive` returns an
+{class}`~rampa.distributed.archive.ArchiveManifest` when unpacking it:
 
 ```python
 from rampa.distributed.archive import create_archive, extract_archive

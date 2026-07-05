@@ -17,7 +17,8 @@ $ rampa doctor
 
 ## Write a scenario
 
-Create `load_test.py`:
+Create `load_test.py` with a {func}`~rampa.loader.scenario` function
+that receives a {class}`~rampa.worker.Worker`:
 
 ```python
 import asyncio
@@ -44,6 +45,7 @@ The console summary shows iteration count, request timing percentiles
 ## Add thresholds
 
 Thresholds enforce performance criteria. A breach produces exit code 1.
+Define them on a module-level {class}`~rampa.config.Config`:
 
 ```python
 config = rampa.Config(

@@ -30,6 +30,9 @@ threshold breaches, `rampa run` exits with code 1.
 
 ## Examples
 
+Put threshold expressions in a module-level
+{class}`~rampa.config.Config`:
+
 ```python
 config = rampa.Config(
     thresholds={
@@ -53,7 +56,9 @@ config = rampa.Config(
 
 ## In a script
 
-Define `config` at module level:
+Define `config` at module level, then add a
+{func}`~rampa.loader.scenario` that receives a
+{class}`~rampa.worker.Worker`:
 
 ```python
 import rampa

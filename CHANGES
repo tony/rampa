@@ -59,9 +59,10 @@ backends run simultaneously in a single test. (#4)
 
 #### WebSocket and gRPC protocol clients
 
-`worker.ws` and `worker.grpc` lazy properties give scenarios access to
-WebSocket sessions and gRPC unary/streaming calls with automatic metric
-emission matching k6's `ws_*` and `grpc_*` vocabulary. (#4)
+{attr}`~rampa.worker.Worker.ws` and
+{attr}`~rampa.worker.Worker.grpc` lazy properties give scenarios access
+to WebSocket sessions and gRPC unary/streaming calls with automatic
+metric emission matching k6's `ws_*` and `grpc_*` vocabulary. (#4)
 
 #### Distributed execution primitives
 

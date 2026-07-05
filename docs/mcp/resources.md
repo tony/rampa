@@ -93,5 +93,6 @@ threshold expression.
 ```
 
 Read `rampa://runs/{run_id}/events` for the accumulated event
-history including `PhaseEvent`, `SnapshotEvent`, and
-`ThresholdEvent` entries.
+history including {class}`~rampa.events.PhaseEvent`,
+{class}`~rampa.events.SnapshotEvent`, and
+{class}`~rampa.events.ThresholdEvent` entries.

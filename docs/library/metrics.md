@@ -55,7 +55,10 @@ request. You can also emit custom metrics from your scenario code.
 
 ## Custom metrics
 
-Emit custom metrics from your scenario:
+Emit custom metrics from your scenario with
+{meth}`~rampa.worker.Worker.counter`,
+{meth}`~rampa.worker.Worker.gauge`, and
+{meth}`~rampa.worker.Worker.trend`:
 
 ```python
 @rampa.scenario(executor="constant-vus", vus=5, duration="30s")
