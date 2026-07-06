@@ -9,6 +9,15 @@
 _Notes on the upcoming release will go here._
 <!-- END PLACEHOLDER - ADD NEW CHANGELOG ENTRIES BELOW THIS LINE -->
 
+### Documentation
+
+#### Grok CLI and Antigravity in the MCP install picker
+
+The MCP install docs' client picker now covers Grok CLI and Antigravity
+(Google's agy) alongside Claude, Codex, Gemini, and Cursor. Grok registers
+through its own `grok mcp add` verb; Antigravity has no such verb, so its
+`mcpServers` snippet is pasted into `~/.gemini/config/mcp_config.json`. (#10)
+
 ### Development
 
 #### Native-code boundary policy
