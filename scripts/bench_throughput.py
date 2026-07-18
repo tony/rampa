@@ -17,7 +17,6 @@ from __future__ import annotations
 import asyncio
 import datetime
 import json
-import os
 import queue
 import sys
 import time
@@ -29,49 +28,7 @@ from rampa._types import Sample
 from rampa.config import ScenarioConfig
 from rampa.executors import ExecutionState
 from rampa.executors.constant_vus import ConstantVUsExecutor
-
-
-def _parse_env_int(name: str, default: int) -> int:
-    """Parse an integer from an environment variable.
-
-    Parameters
-    ----------
-    name : str
-        Environment variable name.
-    default : int
-        Default value if not set.
-
-    Returns
-    -------
-    int
-        Parsed value.
-
-    >>> os.environ.pop("_TEST", None)
-    >>> _parse_env_int("_TEST", 10)
-    10
-    """
-    return int(os.environ.get(name, str(default)))
-
-
-def _parse_env_float(name: str, default: float) -> float:
-    """Parse a float from an environment variable.
-
-    Parameters
-    ----------
-    name : str
-        Environment variable name.
-    default : float
-        Default value if not set.
-
-    Returns
-    -------
-    float
-        Parsed value.
-
-    >>> _parse_env_float("_MISSING", 1.5)
-    1.5
-    """
-    return float(os.environ.get(name, str(default)))
+from scripts._bench_common import build_env_info, parse_env_float, parse_env_int
 
 
 async def run_benchmark(
@@ -128,6 +85,7 @@ async def run_benchmark(
 
     return {
         "benchmark": "throughput",
+        "env": build_env_info(),
         "config": {
             "vus": vus,
             "duration": duration,
@@ -152,8 +110,8 @@ async def run_benchmark(
 @click.option("--ndjson", is_flag=True, help="Output as NDJSON.")
 def main(json_flag: bool, ndjson: bool) -> None:
     """Run the throughput benchmark."""
-    vus = _parse_env_int("BENCH_VUS", 50)
-    duration = _parse_env_float("BENCH_DURATION", 2.0)
+    vus = parse_env_int("BENCH_VUS", 50)
+    duration = parse_env_float("BENCH_DURATION", 2.0)
 
     result = asyncio.run(run_benchmark(vus, duration))
 
