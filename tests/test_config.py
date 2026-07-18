@@ -85,7 +85,7 @@ def test_parse_duration_rejects_invalid(test_id: str, value: str) -> None:
 
 def test_stage_creation() -> None:
     """Stage parses duration strings and stores target."""
-    stage = Stage(duration="1m", target=100)  # ty: ignore[invalid-argument-type]
+    stage = Stage(duration="1m", target=100)
     assert stage.duration == datetime.timedelta(minutes=1)
     assert stage.target == 100
 
@@ -102,7 +102,7 @@ def test_scenario_config_defaults() -> None:
 
 def test_scenario_config_with_duration() -> None:
     """ScenarioConfig parses duration strings."""
-    cfg = ScenarioConfig(executor="constant-vus", vus=10, duration="30s")  # ty: ignore[invalid-argument-type]
+    cfg = ScenarioConfig(executor="constant-vus", vus=10, duration="30s")
     assert cfg.duration == datetime.timedelta(seconds=30)
 
 
@@ -110,7 +110,7 @@ def test_config_scenarios_only() -> None:
     """Config accepts scenarios without shortcut options."""
     cfg = Config(
         scenarios={
-            "smoke": ScenarioConfig(executor="constant-vus", vus=1, duration="10s"),  # ty: ignore[invalid-argument-type]
+            "smoke": ScenarioConfig(executor="constant-vus", vus=1, duration="10s"),
         },
     )
     assert "smoke" in cfg.scenarios
@@ -118,7 +118,7 @@ def test_config_scenarios_only() -> None:
 
 def test_config_options_only() -> None:
     """Config accepts shortcut options without scenarios."""
-    cfg = Config(options=Options(vus=10, duration="30s"))  # ty: ignore[invalid-argument-type]
+    cfg = Config(options=Options(vus=10, duration="30s"))
     assert cfg.options.vus == 10
     assert cfg.scenarios == {}
 
@@ -128,9 +128,9 @@ def test_config_rejects_both_scenarios_and_shortcuts() -> None:
     with pytest.raises(ValueError, match="cannot use both"):
         Config(
             scenarios={
-                "smoke": ScenarioConfig(executor="constant-vus", vus=1, duration="10s"),  # ty: ignore[invalid-argument-type]
+                "smoke": ScenarioConfig(executor="constant-vus", vus=1, duration="10s"),
             },
-            options=Options(vus=10, duration="30s"),  # ty: ignore[invalid-argument-type]
+            options=Options(vus=10, duration="30s"),
         )
 
 
