@@ -1491,7 +1491,7 @@ dev = [
     { name = "sphinx-autodoc-pytest-fixtures", specifier = "==0.0.1a34" },
     { name = "textual", specifier = ">=3.0" },
     { name = "tomlkit", specifier = ">=0.13" },
-    { name = "ty", specifier = ">=0.0.35" },
+    { name = "ty", specifier = ">=0.0.59" },
 ]
 docs = [
     { name = "fastmcp", specifier = ">=2.0" },

@@ -76,7 +76,7 @@ dev = [
   "textual>=3.0",
   "grpcio>=1.70",
   "ruff",
-  "ty>=0.0.35",
+  "ty>=0.0.59",
 ]
 docs = [
   "gp-sphinx==0.0.1a34",
