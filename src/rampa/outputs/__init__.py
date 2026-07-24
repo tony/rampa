@@ -77,7 +77,7 @@ def get_output(name: str, destination: str = "") -> Output:
         raise ValueError(msg)
     if name == "console":
         return cls()  # type: ignore[call-arg]
-    return cls(destination)  # type: ignore[call-arg]
+    return cls(destination)  # ty: ignore[too-many-positional-arguments]
 
 
 __all__ = [
