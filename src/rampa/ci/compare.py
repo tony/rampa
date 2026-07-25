@@ -16,6 +16,22 @@ import typing as t
 class MetricDelta(t.NamedTuple):
     """Comparison of a single metric stat between two runs.
 
+    Attributes
+    ----------
+    metric : str
+        Metric name, e.g. ``"http_req_duration"``.
+    stat : str
+        Stat compared, e.g. ``"p(95)"``.
+    baseline : float
+        Value of the stat in the baseline run.
+    current : float
+        Value of the stat in the current run.
+    pct_change : float
+        Percent change from ``baseline`` to ``current``. Positive means the value grew;
+        for latency metrics that is a regression.
+
+    Examples
+    --------
     >>> d = MetricDelta("http_req_duration", "p(95)", 45.0, 52.0, 15.56)
     >>> d.pct_change
     15.56
