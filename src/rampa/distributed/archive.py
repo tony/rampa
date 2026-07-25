@@ -20,6 +20,31 @@ from dataclasses import dataclass, field
 class ArchiveManifest:
     """Metadata for a rampa test archive.
 
+    Mirrors the ``manifest.json`` member of a ``.rampa`` zip archive.
+
+    Attributes
+    ----------
+    version : int
+        Manifest schema version, so a reader can reject an archive it cannot interpret.
+    entrypoint : str
+        Archive-relative name of the test script to execute.
+    python_version : str
+        Interpreter version the archive was built for, e.g. ``"3.14"``. Empty when the
+        archive does not pin one.
+    dependencies : list[str]
+        pip-compatible requirement strings to install before the run. Empty when the
+        script needs nothing beyond rampa itself.
+    data_files : list[str]
+        Paths of the extra files bundled under the archive's ``data/`` directory.
+    config : dict[str, Any]
+        Run configuration carried alongside the script. Empty when the script supplies
+        its own configuration.
+    sha256 : str
+        Hex digest of the archive bytes, used to verify an archive received from
+        another machine. Empty when the digest is unknown to the reader.
+
+    Examples
+    --------
     >>> m = ArchiveManifest(entrypoint="load_test.py")
     >>> m.version
     1
