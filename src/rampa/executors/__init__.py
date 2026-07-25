@@ -31,7 +31,7 @@ WorkerFn = t.Callable[[Worker], t.Awaitable[None]]
 class ExecutionState:
     """Shared mutable state for executor coordination.
 
-    Parameters
+    Attributes
     ----------
     sample_queue : queue.SimpleQueue[Sample | None]
         Queue for metric sample emission.
@@ -42,8 +42,14 @@ class ExecutionState:
     scenario : str
         Current scenario name.
     setup_data : Any
-        Data from the setup() phase.
+        Data from the setup() phase. ``None`` when the test defines no setup or setup
+        returned nothing.
+    pause_controller : PauseController
+        Gate each iteration waits on before starting, so a frontend can hold and release
+        the workload mid-run. Defaults to a fresh, unpaused controller.
 
+    Examples
+    --------
     >>> import asyncio
     >>> state = ExecutionState(
     ...     sample_queue=queue.SimpleQueue(),
