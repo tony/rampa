@@ -9,6 +9,23 @@
 _Notes on the upcoming release will go here._
 <!-- END PLACEHOLDER - ADD NEW CHANGELOG ENTRIES BELOW THIS LINE -->
 
+### Breaking changes
+
+#### The deprecated HTTP+SSE transport is refused
+
+`rampa-mcp` now exits with an error when `FASTMCP_TRANSPORT` is set to `sse`
+rather than serving that transport. The MCP specification deprecated HTTP+SSE
+in revision 2025-03-26 and schedules it for removal ahead of every other
+deprecated feature.
+
+Switch to Streamable HTTP:
+
+```console
+$ FASTMCP_TRANSPORT=http rampa-mcp
+```
+
+The default `stdio` transport is unaffected, as is `streamable-http`. (#14)
+
 ### Documentation
 
 #### Grok CLI and Antigravity in the MCP install picker
