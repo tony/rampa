@@ -49,6 +49,18 @@ logger = logging.getLogger(__name__)
 class EngineOptions:
     """Configuration for engine behavior.
 
+    Attributes
+    ----------
+    run_id : str | None
+        Identifier to assign the run. ``None`` lets the engine generate one.
+    metric_flush_interval : float
+        Seconds between metric snapshot emissions by the metric engine.
+    on_sample : Callable[[Sample], None] | None
+        Called for every metric sample as the metric engine ingests it, on the metric
+        engine thread. ``None`` skips per-sample notification.
+
+    Examples
+    --------
     >>> opts = EngineOptions()
     >>> opts.metric_flush_interval
     0.05
