@@ -77,6 +77,18 @@ entry whose backup has gone missing, and auth-overriding env vars such as
 env (e.g. a scratch/isolation var) into the server entry without a manual
 post-edit.
 
+#### Warnings fail the test suite
+
+Any warning raised during a test run is now an error. Upstream deprecations
+surface in the release that introduces them instead of scrolling past in CI
+output, and leaked {class}`~rampa.http.HttpClient` sessions fail the build
+rather than being reported and ignored.
+
+The suite was already clean, so this locks in the current state rather than
+working through a backlog. A dependency that starts warning will turn unrelated
+pull requests red; the remedy is a targeted ignore naming the upstream cause,
+not a broader exemption. (#15)
+
 ## rampa 0.0.1a1 (2026-05-27)
 
 rampa 0.0.1a1 ships pluggable output backends, protocol clients for
