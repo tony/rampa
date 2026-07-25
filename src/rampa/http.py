@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import queue
 import time
+import types
 import typing as t
 from dataclasses import dataclass
 
@@ -101,18 +102,20 @@ def _estimate_request_size(kwargs: dict[str, t.Any]) -> int:
     return 0
 
 
-class _TraceTimings:
+class _TraceTimings(types.SimpleNamespace):
     """Per-request timing accumulator for aiohttp trace signals.
 
-    Accepts and ignores ``trace_request_ctx`` so it can be used as
-    an aiohttp ``trace_config_ctx_factory``.
+    Subclasses ``types.SimpleNamespace`` because aiohttp declares its
+    ``trace_config_ctx_factory`` as ``type[SimpleNamespace]``. Extra keyword
+    arguments (aiohttp passes ``trace_request_ctx``) are kept as attributes.
 
-    >>> t = _TraceTimings()
-    >>> t.request_start
+    >>> timings = _TraceTimings()
+    >>> timings.request_start
     0
     """
 
     def __init__(self, **kwargs: t.Any) -> None:
+        super().__init__(**kwargs)
         self.request_start: int = 0
         self.connection_create_start: int = 0
         self.connection_create_end: int = 0
@@ -121,60 +124,66 @@ class _TraceTimings:
         self.request_end: int = 0
 
 
-def _build_trace_config(client: t.Any) -> aiohttp.TraceConfig:
+def _build_trace_config(client: HttpClient) -> aiohttp.TraceConfig:
     """Build an aiohttp TraceConfig that records per-phase timings.
 
     The timings are stored on the trace request context object
     (a ``_TraceTimings`` instance) and read back by the caller
     after the request completes.
 
+    Handlers take ``ctx`` as ``types.SimpleNamespace`` because that is the type
+    aiohttp declares on its trace signals; each narrows it back to the
+    ``_TraceTimings`` instance built by the configured context factory.
+
     >>> import rampa.http
     """
-    tc = aiohttp.TraceConfig(trace_config_ctx_factory=_TraceTimings)  # ty: ignore[invalid-argument-type]
+    tc = aiohttp.TraceConfig(trace_config_ctx_factory=_TraceTimings)
 
     async def _on_request_start(
         session: aiohttp.ClientSession,
-        ctx: _TraceTimings,
+        ctx: types.SimpleNamespace,
         params: aiohttp.TraceRequestStartParams,
     ) -> None:
-        ctx.request_start = time.monotonic_ns()
-        client._current_timings = ctx
+        timings = t.cast("_TraceTimings", ctx)
+        timings.request_start = time.monotonic_ns()
+        client._current_timings = timings
 
     async def _on_connection_create_start(
         session: aiohttp.ClientSession,
-        ctx: _TraceTimings,
+        ctx: types.SimpleNamespace,
         params: aiohttp.TraceConnectionCreateStartParams,
     ) -> None:
-        ctx.connection_create_start = time.monotonic_ns()
+        t.cast("_TraceTimings", ctx).connection_create_start = time.monotonic_ns()
 
     async def _on_connection_create_end(
         session: aiohttp.ClientSession,
-        ctx: _TraceTimings,
+        ctx: types.SimpleNamespace,
         params: aiohttp.TraceConnectionCreateEndParams,
     ) -> None:
-        ctx.connection_create_end = time.monotonic_ns()
+        t.cast("_TraceTimings", ctx).connection_create_end = time.monotonic_ns()
 
     async def _on_request_headers_sent(
         session: aiohttp.ClientSession,
-        ctx: _TraceTimings,
+        ctx: types.SimpleNamespace,
         params: aiohttp.TraceRequestHeadersSentParams,
     ) -> None:
-        ctx.request_headers_sent = time.monotonic_ns()
+        t.cast("_TraceTimings", ctx).request_headers_sent = time.monotonic_ns()
 
     async def _on_response_chunk_received(
         session: aiohttp.ClientSession,
-        ctx: _TraceTimings,
+        ctx: types.SimpleNamespace,
         params: aiohttp.TraceResponseChunkReceivedParams,
     ) -> None:
-        if ctx.first_response_chunk == 0:
-            ctx.first_response_chunk = time.monotonic_ns()
+        timings = t.cast("_TraceTimings", ctx)
+        if timings.first_response_chunk == 0:
+            timings.first_response_chunk = time.monotonic_ns()
 
     async def _on_request_end(
         session: aiohttp.ClientSession,
-        ctx: _TraceTimings,
+        ctx: types.SimpleNamespace,
         params: aiohttp.TraceRequestEndParams,
     ) -> None:
-        ctx.request_end = time.monotonic_ns()
+        t.cast("_TraceTimings", ctx).request_end = time.monotonic_ns()
 
     tc.on_request_start.append(_on_request_start)
     tc.on_connection_create_start.append(_on_connection_create_start)
