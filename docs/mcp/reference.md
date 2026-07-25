@@ -27,57 +27,24 @@ configuration types used by the MCP tools and resources.
 
 ## Events
 
-```{eval-rst}
-.. autoclass:: rampa.events.RunResult
-   :members:
-   :no-index:
-
-.. autoclass:: rampa.events.RunStatus
-   :members:
-   :undoc-members:
-   :no-index:
-
-.. autoclass:: rampa.events.PhaseEvent
-   :members:
-   :no-index:
-
-.. autoclass:: rampa.events.SnapshotEvent
-   :members:
-   :no-index:
-
-.. autoclass:: rampa.events.ThresholdEvent
-   :members:
-   :no-index:
-```
+The tools and resources hand back rampa's own event types, which the
+library {ref}`api-reference` documents: a finished run arrives as a
+{class}`~rampa.events.RunResult` carrying a
+{class}`~rampa.events.RunStatus`, and a live run streams
+{class}`~rampa.events.PhaseEvent`,
+{class}`~rampa.events.SnapshotEvent`, and
+{class}`~rampa.events.ThresholdEvent`.
 
 ## Configuration
 
-```{eval-rst}
-.. autoclass:: rampa.config.Config
-   :members:
-   :no-index:
-
-.. autoclass:: rampa.config.ScenarioConfig
-   :members:
-   :no-index:
-
-.. autoclass:: rampa.config.Stage
-   :members:
-   :no-index:
-```
+You describe a run with the same {class}`~rampa.config.Config` the CLI
+loads, built from {class}`~rampa.config.ScenarioConfig` entries and
+their {class}`~rampa.config.Stage` ramps.
 
 ## Metrics
 
-```{eval-rst}
-.. autoclass:: rampa.metrics.MetricSnapshot
-   :members:
-   :no-index:
-
-.. autoclass:: rampa.thresholds.ThresholdResult
-   :members:
-   :no-index:
-
-.. autoclass:: rampa.thresholds.ThresholdExpression
-   :members:
-   :no-index:
-```
+Metric and threshold queries answer with a
+{class}`~rampa.metrics.MetricSnapshot`, a
+{class}`~rampa.thresholds.ThresholdResult` per threshold, and the
+{class}`~rampa.thresholds.ThresholdExpression` each one was parsed
+from.
