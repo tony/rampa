@@ -204,6 +204,27 @@ class RampaHelpFormatter(argparse.RawDescriptionHelpFormatter):
 class HelpTheme(t.NamedTuple):
     """Theme colors for help output.
 
+    Each field holds the ANSI escape prefix applied to one kind of token in the help
+    text, with ``reset`` closing it. An empty string means colors are disabled, so
+    applying the theme leaves the text unchanged.
+
+    Attributes
+    ----------
+    prog : str
+        Prefix for the program name, the first token of an example command line.
+    action : str
+        Prefix for the subcommand following the program name.
+    long_option : str
+        Prefix for a ``--long`` option token.
+    short_option : str
+        Prefix for a ``-s`` option token.
+    label : str
+        Prefix for the value token that follows an option expecting an argument.
+    heading : str
+        Prefix for an ``Examples:`` section heading line.
+    reset : str
+        Sequence appended after a colored token to restore default terminal styling.
+
     Examples
     --------
     >>> theme = HelpTheme.from_colors(None)
