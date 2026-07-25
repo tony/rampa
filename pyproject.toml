@@ -236,6 +236,10 @@ doctest_optionflags = [
   "ELLIPSIS",
   "NORMALIZE_WHITESPACE",
 ]
+filterwarnings = [
+  # Add an ignore only with a comment naming the upstream cause.
+  "error",
+]
 testpaths = [
   "src/rampa",
   "tests",
