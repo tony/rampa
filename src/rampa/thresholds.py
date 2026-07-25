@@ -40,6 +40,22 @@ _OPERATORS: dict[str, t.Callable[[float, float], bool]] = {
 class ThresholdExpression:
     """A parsed threshold expression.
 
+    Attributes
+    ----------
+    aggregation : str
+        Sink stat the left-hand side reads, one of ``count``, ``rate``, ``value``,
+        ``avg``, ``min``, ``max``, ``med``, or ``p(N)``.
+    aggregation_value : float | None
+        Percentile requested by a ``p(N)`` aggregation, e.g. ``95.0``. ``None`` for every
+        other aggregation, which takes no argument.
+    operator : str
+        Comparison applied to the stat, one of ``<``, ``<=``, ``>``, ``>=``, ``==``,
+        ``===``, or ``!=``.
+    value : float
+        Right-hand side the stat is compared against.
+
+    Examples
+    --------
     >>> expr = parse_threshold("p(95)<500")
     >>> expr.aggregation
     'p(95)'
@@ -144,6 +160,25 @@ def parse_submetric(name: str) -> tuple[str, dict[str, str]]:
 class Threshold:
     """A configured threshold with expression and abort behavior.
 
+    Attributes
+    ----------
+    source : str
+        Expression as the user wrote it, e.g. ``"p(95)<500"``. Carried through to
+        results so a report can name the criterion that failed.
+    expression : ThresholdExpression
+        Parsed form of ``source``, supplying the stat, operator, and comparison value.
+    abort_on_fail : bool
+        Whether a mid-run failure stops the test instead of letting it finish and
+        reporting the failure at the end.
+    grace_period : float | None
+        Seconds a failure must persist before an abort-on-fail threshold stops the run,
+        which keeps warm-up noise from ending a test. ``None`` aborts on the first
+        failure.
+    last_failed : bool
+        Whether the most recent evaluation of this threshold failed.
+
+    Examples
+    --------
     >>> t = Threshold(
     ...     source="p(95)<500",
     ...     expression=parse_threshold("p(95)<500"),
@@ -163,6 +198,20 @@ class Threshold:
 class ThresholdResult:
     """Result of evaluating one threshold.
 
+    Attributes
+    ----------
+    source : str
+        Expression that was evaluated, copied from the threshold's ``source``.
+    passed : bool
+        Whether the comparison held. A threshold whose metric has no sink counts as
+        passed, so a metric that never recorded a sample does not fail the run.
+    lhs : float
+        Observed stat value. ``0.0`` when the metric had no sink to read.
+    rhs : float
+        Value the stat was compared against.
+
+    Examples
+    --------
     >>> r = ThresholdResult(source="p(95)<500", passed=True, lhs=450.0, rhs=500.0)
     >>> r.passed
     True
