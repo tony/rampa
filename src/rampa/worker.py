@@ -21,6 +21,19 @@ from rampa.http import HttpClient
 class ExecutionInfo:
     """Execution context for the current worker iteration.
 
+    Attributes
+    ----------
+    worker_id : int
+        Identifier of the worker running this iteration, drawn from a counter shared by
+        the whole scenario.
+    scenario : str
+        Name of the scenario the iteration belongs to.
+    iteration : int
+        Zero-based iteration number, counted across the whole scenario rather than per
+        worker.
+
+    Examples
+    --------
     >>> info = ExecutionInfo(worker_id=1, scenario="load", iteration=0)
     >>> info.worker_id
     1

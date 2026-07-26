@@ -23,6 +23,20 @@ logger = logging.getLogger(__name__)
 class RuntimeRun:
     """Non-serializable async state for an active run.
 
+    Held only while the run is in flight; the registry drops it on completion so the
+    metric engine threads and client sessions behind it are released.
+
+    Attributes
+    ----------
+    controller : RunController
+        Control surface for the run, used to stop it and read live snapshots.
+    wait_task : asyncio.Task[RunResult]
+        Task awaiting the run's final result.
+    event_task : asyncio.Task[None]
+        Task draining the run's event stream into the record's ``events`` list.
+
+    Examples
+    --------
     >>> import rampa.mcp.registry
     """
 
@@ -35,6 +49,25 @@ class RuntimeRun:
 class RunRecord:
     """Per-run state in the registry.
 
+    Attributes
+    ----------
+    run_id : str
+        Identifier the registry keys this run by.
+    script_path : str
+        Path of the test script the run was started from.
+    started_at : float
+        Start time in monotonic seconds, for measuring elapsed time rather than wall
+        clock.
+    runtime : RuntimeRun | None
+        Live async state while the run is in flight. ``None`` before the tasks are
+        attached and after completion releases them.
+    result : RunResult | None
+        Final result once the run finishes. ``None`` while it is still running.
+    events : list[EngineEvent]
+        Events drained from the run so far, in emission order.
+
+    Examples
+    --------
     >>> r = RunRecord(run_id="abc", script_path="test.py", started_at=0.0)
     >>> r.is_complete
     False

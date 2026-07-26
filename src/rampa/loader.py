@@ -57,6 +57,22 @@ def scenario(
 class TestPlan:
     """Resolved test plan ready for execution.
 
+    Attributes
+    ----------
+    scenarios : dict[str, tuple[ScenarioConfig, Callable[..., Any]]]
+        Scenario name to its executor configuration and the async function that runs one
+        iteration.
+    config : Config
+        Run-wide configuration from the test module, including thresholds. Defaults are
+        used when the module declares no ``config``.
+    setup_fn : Callable[..., Any] | None
+        Function run once before execution, whose return value reaches workers as
+        ``setup_data``. ``None`` when the module defines no setup.
+    teardown_fn : Callable[..., Any] | None
+        Function run once after execution. ``None`` when the module defines no teardown.
+
+    Examples
+    --------
     >>> plan = TestPlan(scenarios={}, config=Config())
     >>> plan.setup_fn is None
     True

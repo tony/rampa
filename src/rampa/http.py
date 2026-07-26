@@ -25,6 +25,20 @@ from rampa._types import Sample, make_sample
 class Response:
     """Wrapper around an HTTP response with metric-relevant fields.
 
+    Attributes
+    ----------
+    status : int
+        HTTP status code of the response.
+    headers : dict[str, str]
+        Response headers, keyed as the server sent them.
+    body : bytes
+        Response body, already read into memory. Decode with :meth:`text` or parse with
+        :meth:`json`.
+    url : str
+        Final URL the response came from, after any redirects.
+
+    Examples
+    --------
     >>> r = Response(status=200, headers={}, body=b"ok", url="http://x")
     >>> r.status
     200

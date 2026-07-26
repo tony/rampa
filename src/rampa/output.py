@@ -56,6 +56,15 @@ class Output(t.Protocol):
 class OutputManager:
     """Fans out sample batches to all registered outputs.
 
+    Attributes
+    ----------
+    outputs : list[Output]
+        Registered output backends, each receiving every flushed batch in registration
+        order. Empty until :meth:`add` registers one; with no outputs, a flush drops the
+        buffered samples.
+
+    Examples
+    --------
     >>> import asyncio
     >>> mgr = OutputManager()
     >>> len(mgr.outputs)

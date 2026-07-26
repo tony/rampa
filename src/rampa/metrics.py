@@ -27,6 +27,18 @@ logger = logging.getLogger(__name__)
 class Metric:
     """A registered metric with name, type, and value type.
 
+    Attributes
+    ----------
+    name : str
+        Metric name samples are keyed by, e.g. ``"http_req_duration"``.
+    metric_type : MetricType
+        Aggregation behavior, which decides the sink used and the stats thresholds can
+        assert on.
+    value_type : ValueType
+        Unit hint for display formatting — a duration, a byte count, or a plain number.
+
+    Examples
+    --------
     >>> m = Metric(name="http_reqs", metric_type=MetricType.COUNTER)
     >>> m.metric_type
     <MetricType.COUNTER: 'counter'>
@@ -542,6 +554,20 @@ class MetricRegistry:
 class MetricSnapshot:
     """Frozen snapshot of aggregated metric values at a point in time.
 
+    Attributes
+    ----------
+    timestamp : int
+        Capture time in monotonic nanoseconds. Only differences between timestamps are
+        meaningful; the origin is arbitrary.
+    duration : float
+        Seconds elapsed since the metric engine started, the window that rate and
+        throughput values are computed over.
+    values : dict[str, dict[str, float]]
+        Metric name to its aggregation, e.g. ``{"count": 100.0, "rate": 10.0}``. The
+        inner keys depend on the metric's type.
+
+    Examples
+    --------
     >>> snap = MetricSnapshot(
     ...     timestamp=0,
     ...     duration=10.0,
@@ -612,7 +638,7 @@ def register_builtins(registry: MetricRegistry) -> None:
 class MetricEngine:
     """Background thread that drains samples and updates sinks.
 
-    Parameters
+    Attributes
     ----------
     registry : MetricRegistry
         Metric registry with sinks.
@@ -620,6 +646,23 @@ class MetricEngine:
         Queue of samples. Send ``None`` to signal shutdown.
     flush_interval : float
         Seconds between snapshot emissions.
+    on_sample : Callable[[Sample], None] | None
+        Called for every sample as it is ingested, on the engine thread. ``None`` skips
+        per-sample notification.
+    on_snapshot : Callable[[MetricSnapshot], None] | None
+        Called with each emitted snapshot. ``None`` skips snapshot notification.
+    thresholds : dict[str, list[Any]]
+        Metric name to the thresholds evaluated against it mid-run. Names may carry a
+        tag-filter suffix. Empty disables mid-run evaluation.
+    threshold_interval : float
+        Minimum seconds between mid-run threshold evaluations, which run less often than
+        snapshots.
+    on_threshold : Callable[[list[Any]], None] | None
+        Called with the results of each mid-run threshold evaluation. ``None`` skips
+        threshold notification.
+    abort_callback : Callable[[], None] | None
+        Called once when an abort-on-fail threshold fails past its grace period, to stop
+        the run. ``None`` lets a failing threshold run to completion.
 
     Examples
     --------
