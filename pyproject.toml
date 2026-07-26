@@ -231,6 +231,12 @@ convention = "numpy"
 # suite: a snippet that no longer runs against the current API is the failure
 # it is looking for.
 "tests/test_docs_examples.py" = ["S102"]
+# `_drain_events` holds one buffered writer open for the life of the run, so
+# the blocking cost is a single `open` plus a flush every few kilobytes.
+# Handing each event write to a thread would put a hand-off in a path that
+# runs for the whole test, and a load generator's own cost competes with what
+# it measures.
+"src/rampa/runner.py" = ["ASYNC230"]
 
 [tool.pytest.ini_options]
 addopts = [
