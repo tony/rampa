@@ -22,6 +22,7 @@ percentiles, checks, thresholds, and correct exit codes.
 import asyncio
 import rampa
 
+
 @rampa.scenario(executor="constant-vus", vus=10, duration="30s")
 async def default(worker: rampa.Worker) -> None:
     resp = await worker.http.get("https://httpbin.org/get")

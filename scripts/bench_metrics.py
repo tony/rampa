@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Benchmark MetricEngine sample ingestion rate.
 
 Bypasses executors entirely — pushes samples directly into the engine's

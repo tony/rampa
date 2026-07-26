@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Benchmark maximum iteration throughput with a no-op worker.
 
 Measures how many iterations/sec the engine can sustain with

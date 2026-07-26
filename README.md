@@ -26,9 +26,12 @@ import rampa
 @rampa.scenario(executor="constant-vus", vus=10, duration="30s")
 async def default(worker: rampa.Worker) -> None:
     resp = await worker.http.get("https://test.k6.io")
-    worker.check(resp, {
-        "status is 200": lambda r: r.status == 200,
-    })
+    worker.check(
+        resp,
+        {
+            "status is 200": lambda r: r.status == 200,
+        },
+    )
 ```
 
 Run it:
@@ -67,13 +70,14 @@ async def setup() -> dict[str, str]:
 
 @rampa.scenario("load")
 async def load_test(worker: rampa.Worker) -> None:
-    resp = await worker.http.get(
-        f"{worker.setup_data['base_url']}/api/users"
+    resp = await worker.http.get(f"{worker.setup_data['base_url']}/api/users")
+    worker.check(
+        resp,
+        {
+            "status is 200": lambda r: r.status == 200,
+            "body has users": lambda r: len(r.json()["users"]) > 0,
+        },
     )
-    worker.check(resp, {
-        "status is 200": lambda r: r.status == 200,
-        "body has users": lambda r: len(r.json()["users"]) > 0,
-    })
 ```
 
 ## Headless Engine API

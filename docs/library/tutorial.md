@@ -51,10 +51,13 @@ condition emits a pass/fail sample on the `checks` metric:
 @rampa.scenario(executor="constant-vus", vus=5, duration="30s")
 async def default(worker: rampa.Worker) -> None:
     resp = await worker.http.get("https://httpbin.org/get")
-    worker.check(resp, {
-        "status is 200": lambda r: r.status == 200,
-        "body is JSON": lambda r: r.json() is not None,
-    })
+    worker.check(
+        resp,
+        {
+            "status is 200": lambda r: r.status == 200,
+            "body is JSON": lambda r: r.json() is not None,
+        },
+    )
 ```
 
 ## Thresholds

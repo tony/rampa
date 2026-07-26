@@ -53,15 +53,14 @@ def test_csv_output_writes_samples(tmp_path: t.Any) -> None:
         ),
     ]
 
-    async def _run() -> str:
+    async def _run() -> None:
         out = CSVOutput(path)
         await out.start()
         await out.add_samples(samples)
         await out.stop()
-        with pathlib.Path(path).open() as f:
-            return f.read()
 
-    text = asyncio.run(_run())
+    asyncio.run(_run())
+    text = pathlib.Path(path).read_text()
     lines = text.strip().split("\n")
     assert len(lines) == 3
     header = lines[0]
@@ -76,14 +75,13 @@ def test_csv_output_empty_produces_empty_file(tmp_path: t.Any) -> None:
     """CSVOutput with no samples produces an empty file."""
     path = str(tmp_path / "empty.csv")
 
-    async def _run() -> str:
+    async def _run() -> None:
         out = CSVOutput(path)
         await out.start()
         await out.stop()
-        with pathlib.Path(path).open() as f:
-            return f.read()
 
-    assert asyncio.run(_run()) == ""
+    asyncio.run(_run())
+    assert pathlib.Path(path).read_text() == ""
 
 
 def test_influxdb_line_protocol_no_tags() -> None:

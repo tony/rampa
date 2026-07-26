@@ -75,7 +75,7 @@ dev = [
   # Lint / typecheck (extras needed for ty resolution)
   "textual>=3.0",
   "grpcio>=1.70",
-  "ruff",
+  "ruff>=0.16.0",
   "ty>=0.0.59",
 ]
 docs = [
@@ -175,7 +175,10 @@ target-version = "py314"
 line-length = 100
 
 [tool.ruff.lint]
-select = [
+# `select` is deliberately unset: ruff 0.16 enables a curated default rule
+# set, and an explicit `select` would replace it rather than extend it.
+# `extend-select` layers this project's additional linters on top.
+extend-select = [
   "E", # pycodestyle
   "F", # pyflakes
   "I", # isort
@@ -192,7 +195,7 @@ select = [
   "PERF", # Perflint
   "RUF", # Ruff-specific rules
   "D", # pydocstyle
-  "FA100",  # future annotations
+  "FA100", # flake8-future-annotations
 ]
 ignore = [
   "COM812", # missing trailing comma, ruff format conflict
@@ -224,6 +227,32 @@ convention = "numpy"
 
 [tool.ruff.lint.per-file-ignores]
 "*/__init__.py" = ["F401"]
+# Executing the Python blocks lifted out of docs/ is the whole point of this
+# suite: a snippet that no longer runs against the current API is the failure
+# it is looking for.
+"tests/test_docs_examples.py" = ["S102"]
+# `_drain_events` holds one buffered writer open for the life of the run, so
+# the blocking cost is a single `open` plus a flush every few kilobytes.
+# Handing each event write to a thread would put a hand-off in a path that
+# runs for the whole test, and a load generator's own cost competes with what
+# it measures.
+"src/rampa/runner.py" = ["ASYNC230"]
+# `run_iteration` is the boundary around the user's scenario function. A load
+# test has to record the failed iteration and keep generating load whatever
+# that function raises, so there is no narrower type to catch.
+"src/rampa/executors/__init__.py" = ["BLE001"]
+# `Worker.check` runs user-supplied predicates. A predicate that raises is a
+# failed check, not a failed run, and user lambdas have no exception contract
+# to narrow against.
+"src/rampa/worker.py" = ["BLE001"]
+# `Coordinator.broadcast` isolates each worker connection: one unreachable
+# worker must not stop the message reaching the rest. The transport can fail
+# in as many ways as the network and the remote peer allow.
+"src/rampa/distributed/coordinator.py" = ["BLE001"]
+# `cmd_use_local` rewrites config files belonging to other tools. Anything at
+# all going wrong after the write has to restore the original bytes and report
+# the backup path, so the rollback handler is deliberately total.
+"scripts/mcp_swap.py" = ["BLE001"]
 
 [tool.pytest.ini_options]
 addopts = [

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Benchmark rampa HTTP overhead against a local aiohttp server.
 
 Measures the overhead rampa adds around HTTP calls by comparing
