@@ -28,9 +28,12 @@ import rampa
 @rampa.scenario(executor="constant-vus", vus=5, duration="10s")
 async def default(worker: rampa.Worker) -> None:
     resp = await worker.http.get("https://httpbin.org/get")
-    worker.check(resp, {
-        "status is 200": lambda r: r.status == 200,
-    })
+    worker.check(
+        resp,
+        {
+            "status is 200": lambda r: r.status == 200,
+        },
+    )
 ```
 
 ## Run it

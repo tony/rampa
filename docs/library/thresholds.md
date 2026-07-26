@@ -40,18 +40,18 @@ import rampa
 config = rampa.Config(
     thresholds={
         "http_req_duration": [
-            "p(95)<500",    # 95th percentile under 500ms
-            "avg<200",      # Average under 200ms
-            "max<2000",     # No request over 2 seconds
+            "p(95)<500",  # 95th percentile under 500ms
+            "avg<200",  # Average under 200ms
+            "max<2000",  # No request over 2 seconds
         ],
         "http_req_failed": [
-            "rate<0.01",    # Less than 1% failure rate
+            "rate<0.01",  # Less than 1% failure rate
         ],
         "checks": [
-            "rate>0.99",    # At least 99% of checks pass
+            "rate>0.99",  # At least 99% of checks pass
         ],
         "iterations": [
-            "count>=100",   # At least 100 iterations completed
+            "count>=100",  # At least 100 iterations completed
         ],
     },
 )

@@ -30,7 +30,7 @@ work deterministically across workers without central assignment:
 from rampa.distributed.segment import ExecutionSegment
 
 seg = ExecutionSegment(index=0, total=3)
-seg.vu_range(30)       # range(0, 10)
+seg.vu_range(30)  # range(0, 10)
 seg.scale_rate(1000.0)  # 333.3
 ```
 
