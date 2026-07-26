@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Benchmark arrival-rate scheduling precision.
 
 Measures how closely the constant-arrival-rate executor matches the
