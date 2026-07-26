@@ -54,7 +54,9 @@ def test_e2e_passing_test(tmp_path: t.Any) -> None:
     """)
     )
 
-    async def _run() -> tuple[RunStatus, dict[str, t.Any]]:
+    json_path = tmp_path / "result.json"
+
+    async def _run() -> RunStatus:
         server_runner, port = await _start_test_server()
         try:
             final_script = tmp_path / "test_final.py"
@@ -62,17 +64,13 @@ def test_e2e_passing_test(tmp_path: t.Any) -> None:
                 script.read_text().replace("{port}", str(port)),
             )
             plan = load_test(str(final_script))
-            json_path = str(tmp_path / "result.json")
-            result = await run_test(plan, json_output_path=json_path, quiet=True)
-            import pathlib
-
-            with pathlib.Path(json_path).open() as f:
-                data = json.load(f)
-            return result.status, data
+            result = await run_test(plan, json_output_path=str(json_path), quiet=True)
+            return result.status
         finally:
             await server_runner.cleanup()
 
-    status, data = asyncio.run(_run())
+    status = asyncio.run(_run())
+    data: dict[str, t.Any] = json.loads(json_path.read_text())
     assert status == RunStatus.PASSED
     assert "summary" in data
     assert "samples" in data
