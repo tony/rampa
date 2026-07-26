@@ -245,6 +245,10 @@ convention = "numpy"
 # failed check, not a failed run, and user lambdas have no exception contract
 # to narrow against.
 "src/rampa/worker.py" = ["BLE001"]
+# `Coordinator.broadcast` isolates each worker connection: one unreachable
+# worker must not stop the message reaching the rest. The transport can fail
+# in as many ways as the network and the remote peer allow.
+"src/rampa/distributed/coordinator.py" = ["BLE001"]
 
 [tool.pytest.ini_options]
 addopts = [
