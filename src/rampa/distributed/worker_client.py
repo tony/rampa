@@ -118,7 +118,7 @@ class WorkerClient:
                 sample = await loop.run_in_executor(
                     None, functools.partial(sample_queue.get, timeout=0.1)
                 )
-            except Exception:
+            except queue.Empty:
                 if buffer:
                     await self._flush_samples(buffer)
                     buffer.clear()
