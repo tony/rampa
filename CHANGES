@@ -35,6 +35,15 @@ The MCP install docs' client picker now covers Grok CLI and Antigravity
 through its own `grok mcp add` verb; Antigravity has no such verb, so its
 `mcpServers` snippet is pasted into `~/.gemini/config/mcp_config.json`. (#10)
 
+#### Class fields describe themselves in the API reference (#13)
+
+The event, config, metric, and threshold types now say what each field
+holds. They previously reached the rendered API reference as "Alias for
+field number 0" or as a bare name carrying only its type.
+
+The MCP reference page links these types to their library reference entries
+rather than rendering a second copy of each.
+
 ### Development
 
 #### Native-code boundary policy
