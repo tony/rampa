@@ -26,6 +26,23 @@ $ FASTMCP_TRANSPORT=http rampa-mcp
 
 The default `stdio` transport is unaffected, as is `streamable-http`. (#14)
 
+### Fixes
+
+#### Async context managers keep the subclass type
+
+{class}`~rampa.http.HttpClient` and
+{class}`~rampa.protocols.websocket.WebSocketSession` annotated `__aenter__`
+with their own class, so a subclass entering its own `async with` block was
+inferred as the base class and lost everything it added. Both now return
+`Self`. (#16)
+
+#### Remote sample streaming surfaces real failures
+
+A distributed worker treated every exception raised while draining its sample
+queue as "nothing available yet", so a genuine failure was indistinguishable
+from an idle queue and the stream loop retried forever instead of raising. Only
+the empty-queue signal is treated as idle now. (#16)
+
 ### Documentation
 
 #### Grok CLI and Antigravity in the MCP install picker
@@ -111,6 +128,18 @@ after this repopulates it.
 Minimum `ruff>=0.16.0` (was unpinned). 0.16.0 formats Python code blocks inside
 Markdown, so `ruff format` now covers README and the docs tree alongside `src/`
 and `tests/`. (#16)
+
+#### ruff's default rule set is in force
+
+Lint configuration moved from `select` to `extend-select`, which layers this
+project's linters on top of ruff's curated default set instead of replacing it.
+An explicit `select` had been silently opting the project out of the defaults.
+
+Every exemption is scoped to one file and carries its reason in
+`pyproject.toml`: the docs example suite runs `exec` by design, the event-log
+drain writes synchronously on purpose, and four catch-all handlers isolate user
+scenario functions, user check predicates, worker connections, and config
+rollback. (#16)
 
 ## rampa 0.0.1a1 (2026-05-27)
 
