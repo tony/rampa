@@ -106,6 +106,12 @@ Workflow actions moved to their current major releases: `actions/checkout` v7,
 unchanged, though setup-uv no longer prunes the uv cache, so the first run
 after this repopulates it.
 
+#### Lint floor moved to ruff 0.16
+
+Minimum `ruff>=0.16.0` (was unpinned). 0.16.0 formats Python code blocks inside
+Markdown, so `ruff format` now covers README and the docs tree alongside `src/`
+and `tests/`. (#16)
+
 ## rampa 0.0.1a1 (2026-05-27)
 
 rampa 0.0.1a1 ships pluggable output backends, protocol clients for
