@@ -237,6 +237,10 @@ convention = "numpy"
 # runs for the whole test, and a load generator's own cost competes with what
 # it measures.
 "src/rampa/runner.py" = ["ASYNC230"]
+# `run_iteration` is the boundary around the user's scenario function. A load
+# test has to record the failed iteration and keep generating load whatever
+# that function raises, so there is no narrower type to catch.
+"src/rampa/executors/__init__.py" = ["BLE001"]
 
 [tool.pytest.ini_options]
 addopts = [
