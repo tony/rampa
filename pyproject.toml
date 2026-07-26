@@ -227,6 +227,10 @@ convention = "numpy"
 
 [tool.ruff.lint.per-file-ignores]
 "*/__init__.py" = ["F401"]
+# Executing the Python blocks lifted out of docs/ is the whole point of this
+# suite: a snippet that no longer runs against the current API is the failure
+# it is looking for.
+"tests/test_docs_examples.py" = ["S102"]
 
 [tool.pytest.ini_options]
 addopts = [
