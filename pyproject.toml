@@ -249,6 +249,10 @@ convention = "numpy"
 # worker must not stop the message reaching the rest. The transport can fail
 # in as many ways as the network and the remote peer allow.
 "src/rampa/distributed/coordinator.py" = ["BLE001"]
+# `cmd_use_local` rewrites config files belonging to other tools. Anything at
+# all going wrong after the write has to restore the original bytes and report
+# the backup path, so the rollback handler is deliberately total.
+"scripts/mcp_swap.py" = ["BLE001"]
 
 [tool.pytest.ini_options]
 addopts = [
