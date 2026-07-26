@@ -241,6 +241,10 @@ convention = "numpy"
 # test has to record the failed iteration and keep generating load whatever
 # that function raises, so there is no narrower type to catch.
 "src/rampa/executors/__init__.py" = ["BLE001"]
+# `Worker.check` runs user-supplied predicates. A predicate that raises is a
+# failed check, not a failed run, and user lambdas have no exception contract
+# to narrow against.
+"src/rampa/worker.py" = ["BLE001"]
 
 [tool.pytest.ini_options]
 addopts = [
