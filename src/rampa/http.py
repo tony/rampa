@@ -244,7 +244,7 @@ class HttpClient:
             )
         return self._session
 
-    async def __aenter__(self) -> HttpClient:
+    async def __aenter__(self) -> t.Self:
         """Enter async context manager."""
         return self
 

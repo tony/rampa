@@ -75,7 +75,7 @@ class WebSocketSession:
             make_sample("ws_session_duration", elapsed_ms, self._tags),
         )
 
-    async def __aenter__(self) -> WebSocketSession:
+    async def __aenter__(self) -> t.Self:
         """Enter context manager."""
         return self
 
