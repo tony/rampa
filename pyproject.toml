@@ -75,7 +75,7 @@ dev = [
   # Lint / typecheck (extras needed for ty resolution)
   "textual>=3.0",
   "grpcio>=1.70",
-  "ruff>=0.16.0",
+  "ruff>=0.16.1",
   "ty>=0.0.59",
 ]
 docs = [
