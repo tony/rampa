@@ -103,6 +103,23 @@ entry whose backup has gone missing, and auth-overriding env vars such as
 env (e.g. a scratch/isolation var) into the server entry without a manual
 post-edit.
 
+#### `mcp_swap.py use-local --pr` and safer config writes
+
+`use-local --pr N` points every CLI at a pull request's head via `uvx` instead
+of the local checkout, so a branch can be driven through the agents without
+checking it out. The number is validated as a pull request before anything is
+written, and the resulting entry is launched once and handshaked against
+`initialize` so a server that cannot start is caught before a config is
+rewritten (`--no-preflight` skips it).
+
+Writing is safer in four ways. A config reached through a symlink is updated in
+place rather than replaced by a regular file, and the file's mode is carried
+over. A repeat swap keeps the first backup instead of taking a fresh one of the
+already-swapped file, so `revert` still lands on the pre-swap config. Recovery
+state records the resolved target path, and a backup that cannot be written, a
+config that cannot be read, and a state file that cannot be parsed are each
+reported against the CLI they belong to instead of aborting the run.
+
 #### Warnings fail the test suite
 
 Any warning raised during a test run is now an error. Upstream deprecations
