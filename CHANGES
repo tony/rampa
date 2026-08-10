@@ -120,6 +120,22 @@ state records the resolved target path, and a backup that cannot be written, a
 config that cannot be read, and a state file that cannot be parsed are each
 reported against the CLI they belong to instead of aborting the run.
 
+#### `mcp_swap.py` swaps opencode and pi
+
+`detect`, `status`, `use-local`, `revert`, and `doctor` now cover two more agent
+CLIs. opencode is written to `$XDG_CONFIG_HOME/opencode/opencode.jsonc` under an
+`mcp` container, with the whole argv packed into one `command` array and env
+spelled `environment`. pi is written to `~/.pi/agent/mcp.json`; pi ships no MCP
+client of its own, so `detect` says the entry only takes effect once the
+third-party `pi-mcp-adapter` package is installed.
+
+Both files are JSONC, so the swap edits them through a comment-preserving codec
+rather than a JSON round-trip: comments, trailing commas, and formatting outside
+the rewritten entry survive a swap and a revert. Per-CLI behavior moved onto
+`CLIInfo` (its container key and dialect) instead of being spread across
+`if cli in (...)` chains, so a new CLI is a registry entry rather than an edit
+in five functions.
+
 #### Warnings fail the test suite
 
 Any warning raised during a test run is now an error. Upstream deprecations
