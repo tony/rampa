@@ -5,9 +5,12 @@
 
 A Python 3.14+ async load testing framework with headless engine, typed
 metrics, threshold policies, and six executor types matching k6's
-scheduling models.
+scheduling models. Runs on Linux and macOS.
 
-> **Pre-alpha.** APIs may change.
+> [!WARNING]
+> **Alpha.** Releases carry an `-alpha` prerelease tag. The API is not settled,
+> and any release may change or remove exported identifiers without a
+> deprecation period. Pin an exact version. Not recommended for production.
 
 ## Installation
 
@@ -117,7 +120,7 @@ failure, 7 = teardown failure.
 
 | Executor | Model | Description |
 |----------|-------|-------------|
-| `constant-vus` | Closed | Fixed N workers for a duration |
+| `constant-vus` | Closed | Fixed N VUs for a duration |
 | `ramping-vus` | Closed | Linear VU ramp between stages |
 | `shared-iterations` | Closed | N VUs share M total iterations |
 | `per-vu-iterations` | Closed | Each VU runs exactly N iterations |
