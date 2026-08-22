@@ -10,10 +10,12 @@ silently reducing the request rate.
 from __future__ import annotations
 
 import asyncio
+import time
 
 from rampa._types import make_sample
 from rampa.config import ScenarioConfig
 from rampa.executors import ExecutionState, register_executor, run_iteration
+from rampa.rate_controller import RateController
 
 
 class ConstantArrivalRateExecutor:
@@ -53,45 +55,54 @@ class ConstantArrivalRateExecutor:
     async def run(self, state: ExecutionState) -> None:
         """Schedule iterations at the configured rate.
 
+        Delegates deadline arithmetic to a ``RateController`` (Python or
+        Rust). Batch-admits all due ticks per wake cycle. Dropped
+        iterations consume their timeslot to avoid cascading drops.
+
         Parameters
         ----------
         state : ExecutionState
             Shared execution state.
         """
-        interval = self._time_unit / self._rate
-        loop = asyncio.get_running_loop()
-        start = loop.time()
+        interval_s = self._time_unit / self._rate
+        interval_ns = int(interval_s * 1_000_000_000)
+        start_ns = time.monotonic_ns()
+        end_ns = start_ns + int(self._duration * 1_000_000_000)
         sem = asyncio.Semaphore(self._max_vus)
-        tick = 0
+
+        controller = RateController(start_ns, interval_ns)
 
         async with asyncio.TaskGroup() as tg:
             while not state.abort_event.is_set():
-                target_time = start + tick * interval
-                now = loop.time()
-                elapsed = now - start
-
-                if elapsed >= self._duration:
+                now_ns = time.monotonic_ns()
+                if now_ns >= end_ns:
                     break
 
-                if now < target_time:
-                    await asyncio.sleep(target_time - now)
+                due, next_deadline_ns = controller.advance(now_ns)
 
-                if sem.locked():
-                    state.sample_queue.put(
-                        make_sample(
-                            "dropped_iterations",
-                            1.0,
-                            {"scenario": state.scenario},
-                        ),
-                    )
-                    await asyncio.sleep(0)
-                else:
-                    await sem.acquire()
-                    tg.create_task(
-                        self._run_iteration(state, sem),
-                    )
+                for _ in range(due):
+                    if state.abort_event.is_set():
+                        break
+                    if sem.locked():
+                        state.sample_queue.put(
+                            make_sample(
+                                "dropped_iterations",
+                                1.0,
+                                {"scenario": state.scenario},
+                            ),
+                        )
+                    else:
+                        await sem.acquire()
+                        tg.create_task(
+                            self._run_iteration(state, sem),
+                        )
 
-                tick += 1
+                if next_deadline_ns >= end_ns:
+                    break
+
+                sleep_s = max(0, (next_deadline_ns - time.monotonic_ns())) / 1_000_000_000
+                if sleep_s > 0:
+                    await asyncio.sleep(sleep_s)
 
     async def _run_iteration(
         self,
