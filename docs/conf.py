@@ -53,7 +53,27 @@ conf["fastmcp_collector_mode"] = "introspect"
 conf["fastmcp_area_map"] = {"rampa_fastmcp": "mcp/tools"}
 conf["fastmcp_server_module"] = "rampa.mcp.server:build_mcp_server"
 
-# Safety badges on tool sections
+# The vocabulary this project tags its MCP tools with.
+# sphinx-autodoc-fastmcp ships no default, so a tool matching none of
+# these renders with no toolset badge. Order is precedence, and every
+# tool also carries topic tags that are deliberately left undeclared so
+# they cannot outrank the tier.
+conf["fastmcp_toolsets"] = (
+    {
+        "tag": "mutating",
+        "tooltip": "Mutating \N{EM DASH} creates or modifies objects",
+        "icon": "\N{PENCIL}\N{VARIATION SELECTOR-16}",
+        "tone": "amber",
+    },
+    {
+        "tag": "readonly",
+        "tooltip": "Read-only \N{EM DASH} does not modify external state",
+        "icon": "\N{LEFT-POINTING MAGNIFYING GLASS}",
+        "tone": "green",
+    },
+)
+
+# Toolset badges on tool sections
 conf["fastmcp_section_badge_map"] = {
     "Run Lifecycle": "mutating",
     "Discovery": "readonly",
