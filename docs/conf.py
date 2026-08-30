@@ -53,12 +53,47 @@ conf["fastmcp_collector_mode"] = "introspect"
 conf["fastmcp_area_map"] = {"rampa_fastmcp": "mcp/tools"}
 conf["fastmcp_server_module"] = "rampa.mcp.server:build_mcp_server"
 
-# Safety badges on tool sections
+# Our tags carry two independent ideas, so each gets an axis and each
+# renders its own badge. Risk carries the colour; topic is outlined so it
+# reads as a secondary label rather than competing with it.
+conf["fastmcp_axes"] = (
+    {
+        "name": "risk",
+        "terms": (
+            {
+                "term": "mutating",
+                "tooltip": "Mutating \N{EM DASH} creates or modifies objects",
+                "icon": "\N{PENCIL}\N{VARIATION SELECTOR-16}",
+                "tone": "amber",
+            },
+            {
+                "term": "readonly",
+                "tooltip": "Read-only \N{EM DASH} does not modify external state",
+                "icon": "\N{LEFT-POINTING MAGNIFYING GLASS}",
+                "tone": "green",
+            },
+        ),
+    },
+    {
+        "name": "topic",
+        "terms": tuple(
+            {"term": term, "tooltip": tooltip, "fill": "outline"}
+            for term, tooltip in (
+                ("lifecycle", "Lifecycle \N{EM DASH} starts, stops or reports a run"),
+                ("discovery", "Discovery \N{EM DASH} reads a script without running it"),
+                ("metrics", "Metrics \N{EM DASH} reads measurements from a run"),
+                ("thresholds", "Thresholds \N{EM DASH} reads pass/fail evaluations"),
+            )
+        ),
+    },
+)
+
+# Toolset badges on tool sections
 conf["fastmcp_section_badge_map"] = {
-    "Run Lifecycle": "mutating",
-    "Discovery": "readonly",
-    "Metrics": "readonly",
-    "Thresholds": "readonly",
+    "Run Lifecycle": "topic:lifecycle",
+    "Discovery": "topic:discovery",
+    "Metrics": "topic:metrics",
+    "Thresholds": "topic:thresholds",
 }
 conf["fastmcp_section_badge_pages"] = ("mcp/tools", "mcp/index", "index")
 

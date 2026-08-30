@@ -45,6 +45,15 @@ the empty-queue signal is treated as idle now. (#16)
 
 ### Documentation
 
+#### Tool badges carry both risk and topic
+
+gp-sphinx 0.1.0a38 replaces the docs toolchain's single tool
+classification with axes this project declares, so each MCP tool renders
+two badges rather than one: `start_run` reads `mutating` and
+`lifecycle`, `get_status` reads `readonly` and `lifecycle`. One
+classification per tool meant one had to win, so either the run-drivers
+and the readers looked alike or the lifecycle grouping disappeared.
+
 #### Grok CLI and Antigravity in the MCP install picker
 
 The MCP install docs' client picker now covers Grok CLI and Antigravity
