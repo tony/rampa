@@ -99,6 +99,12 @@ cache-keys = [
   {file = "rust/src/**/*.rs"},
 ]
 
+# DO NOT MERGE. Local docs preview only: builds tool pages against the
+# unreleased sphinx-autodoc-fastmcp that reads tools off the live server.
+# Drop this table once that release is on PyPI.
+[tool.uv.sources]
+sphinx-autodoc-fastmcp = { git = "https://github.com/git-pull/gp-sphinx.git", branch = "fastmcp-4.x", subdirectory = "packages/sphinx-autodoc-fastmcp" }
+
 [tool.uv.exclude-newer-package]
 fastmcp = false
 fastmcp-slim = false

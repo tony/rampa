@@ -1563,7 +1563,7 @@ dev = [
     { name = "sphinx-autobuild" },
     { name = "sphinx-autodoc-api-style", specifier = "==0.1.0a38" },
     { name = "sphinx-autodoc-argparse", specifier = "==0.1.0a38" },
-    { name = "sphinx-autodoc-fastmcp", specifier = "==0.1.0a38" },
+    { name = "sphinx-autodoc-fastmcp", git = "https://github.com/git-pull/gp-sphinx.git?subdirectory=packages%2Fsphinx-autodoc-fastmcp&branch=fastmcp-4.x" },
     { name = "sphinx-autodoc-pytest-fixtures", specifier = "==0.1.0a38" },
     { name = "textual", specifier = ">=3.0" },
     { name = "tomlkit", specifier = ">=0.13" },
@@ -1575,7 +1575,7 @@ docs = [
     { name = "sphinx-autobuild" },
     { name = "sphinx-autodoc-api-style", specifier = "==0.1.0a38" },
     { name = "sphinx-autodoc-argparse", specifier = "==0.1.0a38" },
-    { name = "sphinx-autodoc-fastmcp", specifier = "==0.1.0a38" },
+    { name = "sphinx-autodoc-fastmcp", git = "https://github.com/git-pull/gp-sphinx.git?subdirectory=packages%2Fsphinx-autodoc-fastmcp&branch=fastmcp-4.x" },
     { name = "sphinx-autodoc-pytest-fixtures", specifier = "==0.1.0a38" },
 ]
 
@@ -1852,16 +1852,12 @@ wheels = [
 [[package]]
 name = "sphinx-autodoc-fastmcp"
 version = "0.1.0a38"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/git-pull/gp-sphinx.git?subdirectory=packages%2Fsphinx-autodoc-fastmcp&branch=fastmcp-4.x#a0c4a495de167a7f866111ad012f4f2ad8cb76f7" }
 dependencies = [
     { name = "sphinx" },
     { name = "sphinx-autodoc-typehints-gp" },
     { name = "sphinx-ux-autodoc-layout" },
     { name = "sphinx-ux-badges" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/91/f8/a773f21c4cb87cbb0a8c61e4a35067d689ca8d3571eed6212b3f185ae1cf/sphinx_autodoc_fastmcp-0.1.0a38.tar.gz", hash = "sha256:d92622a3cf54982daa36efa00bb7f07d06e29ca64673e1f2cb3de748d39415b7", size = 32821, upload-time = "2026-08-30T14:08:18.783Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/4c/75/fdf982ec19eb9b7b0ebec5254558dc5880b83882b79e887750b445ed6ec1/sphinx_autodoc_fastmcp-0.1.0a38-py3-none-any.whl", hash = "sha256:39c6173d06d51158e7a8df4f3532cfb80284455badb981f41da5c96801289db2", size = 36740, upload-time = "2026-08-30T14:07:58.736Z" },
 ]
 
 [[package]]
@@ -1883,13 +1879,9 @@ wheels = [
 [[package]]
 name = "sphinx-autodoc-typehints-gp"
 version = "0.1.0a38"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/git-pull/gp-sphinx.git?subdirectory=packages%2Fsphinx-autodoc-typehints-gp&branch=fastmcp-4.x#a0c4a495de167a7f866111ad012f4f2ad8cb76f7" }
 dependencies = [
     { name = "sphinx" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/37/ba/489c1092e46222a90a2a78bddac2199ec12111dd7e0e2370befc379ecc08/sphinx_autodoc_typehints_gp-0.1.0a38.tar.gz", hash = "sha256:d40ce89f68d47bfa2af4f031028b52315f6ca6aaa00cca8b20f486febf9d3d3c", size = 52327, upload-time = "2026-08-30T14:08:21.329Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/19/60/ebec25c2485237d4e4bd1ae54f64c9594b8953aea70e07e209bf35d64eab/sphinx_autodoc_typehints_gp-0.1.0a38-py3-none-any.whl", hash = "sha256:4348a841fbe0644cc61063b0b00a38b1223570b82a1164aad0694b3f58ac6f9f", size = 54907, upload-time = "2026-08-30T14:08:02.494Z" },
 ]
 
 [[package]]
@@ -2004,25 +1996,17 @@ wheels = [
 [[package]]
 name = "sphinx-ux-autodoc-layout"
 version = "0.1.0a38"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/git-pull/gp-sphinx.git?subdirectory=packages%2Fsphinx-ux-autodoc-layout&branch=fastmcp-4.x#a0c4a495de167a7f866111ad012f4f2ad8cb76f7" }
 dependencies = [
     { name = "sphinx" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/4b/77/efd705589f62ad6d1af2d6a58490b4076b9a6d8c8fca3e7cd39a7e667bbf/sphinx_ux_autodoc_layout-0.1.0a38.tar.gz", hash = "sha256:321bf86d2a2d722fbad512db06e3fce2ea9a6cccb07c5657b19daf9fc0327bb3", size = 30837, upload-time = "2026-08-30T14:08:27.723Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/9f/eb/fcdfe267966a724d3069e9d8ae49f653531ee79987f4b4ef0a2f42302494/sphinx_ux_autodoc_layout-0.1.0a38-py3-none-any.whl", hash = "sha256:cc265a05501ffc2166a48db55769ba37fa53003f4608b2e24cea362e331b2fd3", size = 35256, upload-time = "2026-08-30T14:08:10.975Z" },
 ]
 
 [[package]]
 name = "sphinx-ux-badges"
 version = "0.1.0a38"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/git-pull/gp-sphinx.git?subdirectory=packages%2Fsphinx-ux-badges&branch=fastmcp-4.x#a0c4a495de167a7f866111ad012f4f2ad8cb76f7" }
 dependencies = [
     { name = "sphinx" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/3f/d3/80a597e5052db0813d6372079548086453ab37fda44a2baffe9e606e9499/sphinx_ux_badges-0.1.0a38.tar.gz", hash = "sha256:7f35305d51529b728d6d389d1941b07cf6a2951841fe8da922b929a040e2e3ec", size = 16888, upload-time = "2026-08-30T14:08:28.71Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/5f/97/e963c1c8ef14760d44f25047cea41b6aa5e699e674067789ff9ed0ea7d61/sphinx_ux_badges-0.1.0a38-py3-none-any.whl", hash = "sha256:ee3220c4146044501f769ea9eaf7adbacdf034bf30d3d9b1ecc27514cda1075b", size = 17658, upload-time = "2026-08-30T14:08:12.196Z" },
 ]
 
 [[package]]
