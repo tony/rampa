@@ -26,6 +26,41 @@ $ FASTMCP_TRANSPORT=http rampa-mcp
 
 The default `stdio` transport is unaffected, as is `streamable-http`. (#14)
 
+### Dependencies
+
+#### FastMCP releases are adopted without waiting out the cooldown
+
+The dependency cooldown held every FastMCP release back, so a refreshed lock
+resolved to a patch behind the one being tested against. `fastmcp` and its
+`fastmcp-slim` companion are now exempt from it in
+`[tool.uv.exclude-newer-package]`. The metapackage pins its companion to an
+exact version, so exempting one without the other leaves the pair unresolvable.
+
+#### FastMCP 4
+
+The `mcp` extra requires `fastmcp>=4.0` (was `>=2.0`) and gains the upper bound
+it never had — the old floor admitted every release back to FastMCP 2. FastMCP
+4 builds on MCP Python SDK v2, which brings `mcp>=2.0.0`, `mcp-types`, and
+pydantic 2.12, and swaps httpx for httpx2 across FastMCP's HTTP stack.
+
+The migration itself needed no changes to rampa. The MCP server uses the API
+subset FastMCP 4 left untouched, and its run lifecycle was already poll-based —
+`start_run` returns immediately and the caller polls `get_status` — so it needs
+nothing from the session back-channel the sessionless protocol removes.
+
+### What's new
+
+#### `rampa://runs/{run_id}` answers argument completion
+
+A run id is minted by the server, and MCP publishes a template's URI but never
+its parameter domain, so a caller had no wire path to the ids at all. The
+`run_id` placeholder now completes from the live registry, filtered by what has
+been typed.
+
+This serves human-facing hosts — the MCP Inspector's browser UI and VS Code
+send `completion/complete`. No agent CLI was measured doing so, so nothing
+changes for an agent.
+
 ### Fixes
 
 #### Async context managers keep the subclass type
@@ -71,6 +106,19 @@ The MCP reference page links these types to their library reference entries
 rather than rendering a second copy of each.
 
 ### Development
+
+#### The hand-written FastMCP docs shim is gone
+
+`docs/_ext/rampa_fastmcp.py` fabricated a `__fastmcp__` spec for every tool by
+hand, duplicating what the real server already holds and checked only against
+the tool-name set, nothing finer. `sphinx-autodoc-fastmcp` now reads tools off
+the live server, so the shim has no job. The docs-contract test keeps its
+useful half: every runtime tool is documented and every documented tool exists.
+
+This relies on the live-server collector, which is not in a published
+`sphinx-autodoc-fastmcp` release yet. Tool pages render empty until one ships
+and the pin here is raised to it.
+
 
 #### Native-code boundary policy
 

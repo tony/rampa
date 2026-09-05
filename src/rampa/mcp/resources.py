@@ -11,11 +11,39 @@ from __future__ import annotations
 import json
 import typing as t
 
+from mcp.types import ResourceTemplateReference
+
 from rampa.events import serialize_event
 from rampa.mcp.tools.runs import get_registry
 
 if t.TYPE_CHECKING:
     from fastmcp import FastMCP
+
+
+def register_completions(mcp: FastMCP) -> None:
+    """Answer argument completion for the ``rampa://runs`` templates.
+
+    A ``run_id`` is minted by the server, so a caller cannot know one
+    without first listing runs — and MCP publishes a template's URI but
+    never its parameter domain, so the listing cannot carry the ids
+    either. Completion is the only wire path to them.
+
+    Serves human-facing hosts; agent clients do not send the request.
+    """
+
+    @mcp.completion
+    def complete_run_id(
+        ref: t.Any,
+        argument: t.Any,
+        context: t.Any,
+    ) -> list[str] | None:
+        """Return live run ids matching what has been typed."""
+        if not isinstance(ref, ResourceTemplateReference):
+            return None
+        if argument.name != "run_id":
+            return None
+        prefix = argument.value or ""
+        return [run.run_id for run in get_registry().list_all() if run.run_id.startswith(prefix)]
 
 
 def register(mcp: FastMCP) -> None:

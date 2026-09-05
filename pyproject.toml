@@ -39,7 +39,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-mcp = ["fastmcp>=2.0"]
+mcp = ["fastmcp>=4.0,<5.0"]
 tui = ["textual>=3.0"]
 grpc = ["grpcio>=1.70"]
 
@@ -63,7 +63,7 @@ dev = [
   "sphinx-autodoc-argparse==0.1.0a38",
   "sphinx-autodoc-pytest-fixtures==0.1.0a38",
   "sphinx-autobuild",
-  "fastmcp>=2.0",
+  "fastmcp>=4.0,<5.0",
   # Testing
   "pytest",
   "pytest-rerunfailures",
@@ -85,7 +85,7 @@ docs = [
   "sphinx-autodoc-argparse==0.1.0a38",
   "sphinx-autodoc-pytest-fixtures==0.1.0a38",
   "sphinx-autobuild",
-  "fastmcp>=2.0",
+  "fastmcp>=4.0,<5.0",
 ]
 
 [build-system]
@@ -99,7 +99,15 @@ cache-keys = [
   {file = "rust/src/**/*.rs"},
 ]
 
+# DO NOT MERGE. Local docs preview only: builds tool pages against the
+# unreleased sphinx-autodoc-fastmcp that reads tools off the live server.
+# Drop this table once that release is on PyPI.
+[tool.uv.sources]
+sphinx-autodoc-fastmcp = { git = "https://github.com/git-pull/gp-sphinx.git", branch = "fastmcp-4.x", subdirectory = "packages/sphinx-autodoc-fastmcp" }
+
 [tool.uv.exclude-newer-package]
+fastmcp = false
+fastmcp-slim = false
 gp-furo-theme = false
 gp-libs = false
 gp-sphinx = false
