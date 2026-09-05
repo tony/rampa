@@ -56,9 +56,10 @@ def _register_all(mcp: FastMCP) -> None:
 
     register_tools(mcp)
 
-    from rampa.mcp.resources import register as register_resources
+    from rampa.mcp.resources import register as register_resources, register_completions
 
     register_resources(mcp)
+    register_completions(mcp)
 
 
 def _reject_deprecated_transport(transport: str) -> None:
