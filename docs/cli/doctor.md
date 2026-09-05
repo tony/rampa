@@ -29,7 +29,7 @@ platform: linux (x86_64)
 aiohttp: 3.13.5
 uvloop: not installed
 textual: not installed
-fastmcp: 4.0.2
+fastmcp: 4.0.x
 ```
 
 ## Checked dependencies
