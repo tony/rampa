@@ -59,6 +59,7 @@ conf["fastmcp_server_module"] = "rampa.mcp.server:build_mcp_server"
 conf["fastmcp_axes"] = (
     {
         "name": "risk",
+        "source": "annotations",
         "terms": (
             {
                 "term": "mutating",
