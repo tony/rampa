@@ -100,6 +100,8 @@ cache-keys = [
 ]
 
 [tool.uv.exclude-newer-package]
+fastmcp = false
+fastmcp-slim = false
 gp-furo-theme = false
 gp-libs = false
 gp-sphinx = false
