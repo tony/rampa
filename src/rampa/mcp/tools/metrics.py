@@ -63,4 +63,5 @@ def register(mcp: FastMCP) -> None:
     mcp.tool(
         name="get_metrics",
         description="Get metrics for a test run. Optionally filter by metric name.",
+        annotations={"read_only_hint": True},
     )(get_metrics_impl)

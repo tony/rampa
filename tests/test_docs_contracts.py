@@ -74,15 +74,18 @@ class FakeMCP:
 
     def __init__(self) -> None:
         self.tool_names: list[str] = []
+        self.tool_annotations: dict[str, dict[str, bool]] = {}
 
     def tool(
         self,
         *,
         name: str,
         description: str,
+        annotations: dict[str, bool] | None = None,
     ) -> t.Callable[[ToolCallable], ToolCallable]:
         """Collect a registered tool callback."""
         _ = description
+        self.tool_annotations[name] = annotations or {}
 
         def decorator(func: ToolCallable) -> ToolCallable:
             self.tool_names.append(name)
