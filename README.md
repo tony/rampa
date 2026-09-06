@@ -1,5 +1,6 @@
 # rampa
 
+[![PyPI version](https://img.shields.io/pypi/v/rampa.svg)](https://pypi.org/project/rampa/)
 [![Python versions](https://img.shields.io/pypi/pyversions/rampa.svg)](https://pypi.org/project/rampa/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
