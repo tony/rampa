@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import inspect
 import pathlib
 import re
 import typing as t
@@ -75,15 +74,18 @@ class FakeMCP:
 
     def __init__(self) -> None:
         self.tool_names: list[str] = []
+        self.tool_annotations: dict[str, dict[str, bool]] = {}
 
     def tool(
         self,
         *,
         name: str,
         description: str,
+        annotations: dict[str, bool] | None = None,
     ) -> t.Callable[[ToolCallable], ToolCallable]:
         """Collect a registered tool callback."""
         _ = description
+        self.tool_annotations[name] = annotations or {}
 
         def decorator(func: ToolCallable) -> ToolCallable:
             self.tool_names.append(name)
@@ -115,7 +117,7 @@ def test_docs_do_not_contain_stale_contract_text(case: ForbiddenTextCase) -> Non
 
 
 def test_mcp_tool_docs_match_runtime_registration() -> None:
-    """MCP tool docs and docs-only shim cover every runtime tool."""
+    """Every runtime tool is documented, and every documented tool exists."""
     mcp = FakeMCP()
     runtime_tools.register(t.cast(t.Any, mcp))
     runtime_names = set(mcp.tool_names)
@@ -123,13 +125,4 @@ def test_mcp_tool_docs_match_runtime_registration() -> None:
     tools_doc = (ROOT / "docs/mcp/tools.md").read_text()
     documented_names = set(re.findall(r"```{fastmcp-tool} ([a-z_]+)", tools_doc))
 
-    from docs._ext import rampa_fastmcp
-
-    shim_names = {
-        namespace.name
-        for _name, func in inspect.getmembers(rampa_fastmcp, inspect.iscoroutinefunction)
-        if (namespace := getattr(func, "__fastmcp__", None)) is not None
-    }
-
     assert documented_names == runtime_names
-    assert shim_names == runtime_names

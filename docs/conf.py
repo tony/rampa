@@ -48,9 +48,8 @@ conf = merge_sphinx_config(
 )
 
 # FastMCP tool collector
-conf["fastmcp_tool_modules"] = ["rampa_fastmcp"]
+conf["fastmcp_tool_modules"] = []
 conf["fastmcp_collector_mode"] = "introspect"
-conf["fastmcp_area_map"] = {"rampa_fastmcp": "mcp/tools"}
 conf["fastmcp_server_module"] = "rampa.mcp.server:build_mcp_server"
 
 # Our tags carry two independent ideas, so each gets an axis and each
@@ -59,6 +58,7 @@ conf["fastmcp_server_module"] = "rampa.mcp.server:build_mcp_server"
 conf["fastmcp_axes"] = (
     {
         "name": "risk",
+        "source": "annotations",
         "terms": (
             {
                 "term": "mutating",

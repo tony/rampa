@@ -67,3 +67,41 @@ def test_run_events_resource_serializes_specific_event_fields(
             "type": "PhaseEvent",
         },
     ]
+
+
+def test_run_id_completion_offers_live_runs() -> None:
+    """``run_id`` completes from the registry, filtered by prefix.
+
+    A run id is minted by the server, and MCP publishes a template's URI
+    but never its parameter domain — so completion is the only wire path
+    to the ids a caller would need.
+    """
+    import mcp.types as mt
+    from fastmcp import Client
+
+    from rampa.mcp.server import build_mcp_server
+    from rampa.mcp.tools.runs import get_registry
+
+    server = build_mcp_server()
+    registry = get_registry()
+    for run_id in ("probe-alpha", "probe-beta"):
+        registry.register(
+            RunRecord(
+                run_id=run_id,
+                script_path="probe.py",
+                started_at=0.0,
+                runtime=None,
+                result=None,
+                events=[],
+            )
+        )
+
+    async def _complete(name: str, value: str) -> list[str]:
+        ref = mt.ResourceTemplateReference(type="ref/resource", uri="rampa://runs/{run_id}")
+        async with Client(server) as client:
+            result = await client.complete(ref, {"name": name, "value": value})
+        return list(result.values)
+
+    assert {"probe-alpha", "probe-beta"} <= set(asyncio.run(_complete("run_id", "")))
+    assert asyncio.run(_complete("run_id", "probe-b")) == ["probe-beta"]
+    assert asyncio.run(_complete("script_path", "")) == []

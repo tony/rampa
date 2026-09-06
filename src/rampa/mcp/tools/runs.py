@@ -258,29 +258,35 @@ def register(mcp: FastMCP) -> None:
     mcp.tool(
         name="start_run",
         description="Start a load test from a Python script.",
+        annotations={"read_only_hint": False},
     )(start_run_impl)
 
     mcp.tool(
         name="stop_run",
         description="Stop a running load test. Idempotent.",
+        annotations={"read_only_hint": False},
     )(stop_run_impl)
 
     mcp.tool(
         name="pause_run",
         description="Pause a running load test. Executors block before next iteration.",
+        annotations={"read_only_hint": False},
     )(pause_run_impl)
 
     mcp.tool(
         name="resume_run",
         description="Resume a paused load test.",
+        annotations={"read_only_hint": False},
     )(resume_run_impl)
 
     mcp.tool(
         name="get_status",
         description="Get current status of a test run.",
+        annotations={"read_only_hint": True},
     )(get_status_impl)
 
     mcp.tool(
         name="list_runs",
         description="List all active and completed test runs.",
+        annotations={"read_only_hint": True},
     )(list_runs_impl)

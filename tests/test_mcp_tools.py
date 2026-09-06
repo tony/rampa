@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 import typing as t
 
+import pytest
+
 from rampa.mcp.tools.runs import (
     get_status_impl,
     list_runs_impl,
@@ -96,3 +98,51 @@ def test_stop_run_not_found() -> None:
 
     result = asyncio.run(_run())
     assert "error" in result
+
+
+class ReadOnlyHintCase(t.NamedTuple):
+    """A tool and the ``readOnlyHint`` it must advertise."""
+
+    test_id: str
+    tool_name: str
+    read_only: bool
+
+
+_READ_ONLY_HINT_CASES: list[ReadOnlyHintCase] = [
+    ReadOnlyHintCase("start_run", "start_run", False),
+    ReadOnlyHintCase("stop_run", "stop_run", False),
+    ReadOnlyHintCase("pause_run", "pause_run", False),
+    ReadOnlyHintCase("resume_run", "resume_run", False),
+    ReadOnlyHintCase("get_status", "get_status", True),
+    ReadOnlyHintCase("list_runs", "list_runs", True),
+    ReadOnlyHintCase("discover_scenarios", "discover_scenarios", True),
+    ReadOnlyHintCase("inspect_config", "inspect_config", True),
+    ReadOnlyHintCase("get_metrics", "get_metrics", True),
+    ReadOnlyHintCase("get_thresholds", "get_thresholds", True),
+]
+
+
+@pytest.mark.parametrize(
+    "case",
+    _READ_ONLY_HINT_CASES,
+    ids=lambda case: case.test_id,
+)
+def test_tool_advertises_read_only_hint(case: ReadOnlyHintCase) -> None:
+    """Every tool declares whether calling it changes state.
+
+    The hint reaches MCP clients, which use it to decide whether a call
+    needs confirmation, and the documentation renders its risk badge from
+    the same value.
+    """
+    from fastmcp import Client
+
+    from rampa.mcp.server import build_mcp_server
+
+    async def _hints() -> dict[str, bool | None]:
+        async with Client(build_mcp_server()) as client:
+            return {
+                tool.name: getattr(tool.annotations, "read_only_hint", None)
+                for tool in await client.list_tools()
+            }
+
+    assert asyncio.run(_hints())[case.tool_name] is case.read_only

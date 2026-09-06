@@ -54,4 +54,5 @@ def register(mcp: FastMCP) -> None:
     mcp.tool(
         name="get_thresholds",
         description="Get threshold evaluation results for a test run.",
+        annotations={"read_only_hint": True},
     )(get_thresholds_impl)

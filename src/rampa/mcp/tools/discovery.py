@@ -68,9 +68,11 @@ def register(mcp: FastMCP) -> None:
     mcp.tool(
         name="discover_scenarios",
         description="Load a script and list its scenarios without running.",
+        annotations={"read_only_hint": True},
     )(discover_scenarios_impl)
 
     mcp.tool(
         name="inspect_config",
         description="Show the fully resolved test configuration.",
+        annotations={"read_only_hint": True},
     )(inspect_config_impl)
