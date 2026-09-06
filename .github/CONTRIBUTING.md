@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for looking. rampa is pre-alpha (`0.0.1a1`): the API is still
+Thanks for looking. rampa is pre-alpha (`0.0.1a2`): the API is still
 moving, so the most useful contribution right now is a bug report with
 a reproduction, or a note on where the documentation misled you.
 

@@ -1,13 +1,22 @@
 # Changelog
 
 
-## rampa 0.0.1a2 (2026-05-27)
+## rampa 0.0.1a3 (unreleased)
 
 <!-- To maintainers and contributors: Please add notes for the forthcoming version below -->
 
 <!-- KEEP THIS PLACEHOLDER - DO NOT REMOVE OR MODIFY THIS LINE -->
 _Notes on the upcoming release will go here._
 <!-- END PLACEHOLDER - ADD NEW CHANGELOG ENTRIES BELOW THIS LINE -->
+
+## rampa 0.0.1a2 (2026-09-06)
+
+rampa 0.0.1a2 moves the MCP server to FastMCP 4 and makes its tools describe
+themselves: every tool declares whether calling it changes state, and
+`rampa://runs/{run_id}` completes run ids from the live registry. The
+deprecated HTTP+SSE transport is refused rather than served. Async context
+managers keep their subclass type, and remote sample streaming surfaces a real
+failure instead of retrying past it.
 
 ### Breaking changes
 
