@@ -162,3 +162,69 @@ def test_arrival_rate_respects_abort() -> None:
     iter_samples = [s for s in samples if s.metric == "iterations"]
     assert len(iter_samples) > 0
     assert len(iter_samples) < 500
+
+
+def test_arrival_rate_tick_advances_on_drop() -> None:
+    """Dropped iterations consume their timeslot (tick advances)."""
+
+    async def very_slow(w: object) -> None:
+        await asyncio.sleep(5.0)
+
+    async def _run() -> list[Sample]:
+        sq: queue.SimpleQueue[Sample | None] = queue.SimpleQueue()
+        cfg = ScenarioConfig(
+            executor="constant-arrival-rate",
+            rate=200.0,
+            duration=datetime.timedelta(milliseconds=100),
+            pre_allocated_vus=1,
+            max_vus=1,
+        )
+        executor = ConstantArrivalRateExecutor(cfg)
+        state = ExecutionState(
+            sample_queue=sq,
+            abort_event=asyncio.Event(),
+            worker_fn=very_slow,
+            scenario="test",
+        )
+        await executor.run(state)
+        return _drain(sq)
+
+    samples = asyncio.run(_run())
+    dropped = [s for s in samples if s.metric == "dropped_iterations"]
+    completed = [s for s in samples if s.metric == "iterations"]
+    total = len(dropped) + len(completed)
+    assert total >= 10
+    assert len(dropped) >= 5
+
+
+def test_arrival_rate_batch_admission() -> None:
+    """After a late wake, multiple due ticks are admitted in batch."""
+    import time
+
+    timestamps: list[int] = []
+
+    async def record_time(w: object) -> None:
+        timestamps.append(time.monotonic_ns())
+
+    async def _run() -> list[Sample]:
+        sq: queue.SimpleQueue[Sample | None] = queue.SimpleQueue()
+        cfg = ScenarioConfig(
+            executor="constant-arrival-rate",
+            rate=500.0,
+            duration=datetime.timedelta(milliseconds=200),
+            pre_allocated_vus=50,
+            max_vus=50,
+        )
+        executor = ConstantArrivalRateExecutor(cfg)
+        state = ExecutionState(
+            sample_queue=sq,
+            abort_event=asyncio.Event(),
+            worker_fn=record_time,
+            scenario="test",
+        )
+        await executor.run(state)
+        return _drain(sq)
+
+    samples = asyncio.run(_run())
+    completed = [s for s in samples if s.metric == "iterations"]
+    assert len(completed) >= 50
