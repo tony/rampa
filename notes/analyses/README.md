@@ -35,7 +35,8 @@ direction but decide nothing.
   [`15-artillery.md`](15-artillery.md), [`16-goose.md`](16-goose.md), [`17-k6.md`](17-k6.md).
 - Cross-cutting: [`20-engines-and-scheduling.md`](20-engines-and-scheduling.md),
   [`21-metric-data-structures.md`](21-metric-data-structures.md),
-  [`22-distributed-and-aggregation.md`](22-distributed-and-aggregation.md).
+  [`22-distributed-and-aggregation.md`](22-distributed-and-aggregation.md),
+  [`23-control-plane-and-execution-drivers.md`](23-control-plane-and-execution-drivers.md).
 
 Each per-tool doc follows the same section order (classification · execution engine · scheduling &
 pacing · result data structure · metric data structure · distributed/aggregation · scenario API ·
