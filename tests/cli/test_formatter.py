@@ -12,6 +12,9 @@ import pytest
 
 from rampa.cli._formatter import RampaHelpFormatter
 
+if t.TYPE_CHECKING:
+    from rampa.cli._formatter import _HelpTheme
+
 
 class ColorizeLineFixture(t.NamedTuple):
     """Test case for _colorize_example_line."""
@@ -108,6 +111,17 @@ def test_colorize_example_line(
         assert fragment not in result.text, f"Expected {fragment!r} NOT in {result.text!r}"
 
 
+class _MockThemeFormatter(RampaHelpFormatter):
+    """Formatter whose examples use ``_MOCK_THEME`` instead of argparse's.
+
+    ``_theme`` belongs to argparse (a read-only property on 3.15), so the mock
+    is supplied through :meth:`RampaHelpFormatter._example_theme`.
+    """
+
+    def _example_theme(self) -> _HelpTheme | None:
+        return t.cast("_HelpTheme", _MOCK_THEME)
+
+
 def test_fill_text_without_theme() -> None:
     """Without theme, _fill_text falls through to base class."""
     formatter = RampaHelpFormatter("rampa")
@@ -118,8 +132,7 @@ def test_fill_text_without_theme() -> None:
 
 def test_fill_text_with_examples_heading() -> None:
     """With theme, examples: heading is colorized."""
-    formatter = RampaHelpFormatter("rampa")
-    formatter._theme = _MOCK_THEME  # ty: ignore[unresolved-attribute]
+    formatter = _MockThemeFormatter("rampa")
 
     text = "Some description.\n\nexamples:\n  rampa run load_test.py"
     result = formatter._fill_text(text, 80, "")
@@ -131,8 +144,7 @@ def test_fill_text_with_examples_heading() -> None:
 
 def test_fill_text_with_named_examples() -> None:
     """Named example sections (e.g. 'run examples:') are colorized."""
-    formatter = RampaHelpFormatter("rampa")
-    formatter._theme = _MOCK_THEME  # ty: ignore[unresolved-attribute]
+    formatter = _MockThemeFormatter("rampa")
 
     text = "Description.\n\nrun examples:\n  rampa run test.py"
     result = formatter._fill_text(text, 80, "")

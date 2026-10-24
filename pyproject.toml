@@ -15,6 +15,7 @@ classifiers = [
   "Intended Audience :: Developers",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3.15",
   "Programming Language :: Python :: Implementation :: CPython",
   "Topic :: Software Development :: Libraries :: Python Modules",
   "Topic :: Software Development :: Testing",
@@ -69,7 +70,7 @@ dev = [
   "pytest-rerunfailures",
   "pytest-watcher",
   # Build (Rust extension)
-  "maturin>=1.0,<2.0",
+  "maturin>=1.9.4,<2.0",
   # Scripts
   "tomlkit>=0.13",
   # Lint / typecheck (extras needed for ty resolution)
@@ -89,7 +90,7 @@ docs = [
 ]
 
 [build-system]
-requires = ["maturin>=1.0,<2.0"]
+requires = ["maturin>=1.9.4,<2.0"]
 build-backend = "maturin"
 
 [tool.uv]
@@ -270,6 +271,9 @@ doctest_optionflags = [
 filterwarnings = [
   # Add an ignore only with a comment naming the upstream cause.
   "error",
+  # py-key-value-aio (via fastmcp) leaves AsyncKeyValue without @runtime_checkable;
+  # beartype's isinstance probe trips Python 3.15's new DeprecationWarning for it.
+  "ignore:.*isn't explicitly decorated with @runtime_checkable:DeprecationWarning",
 ]
 testpaths = [
   "src/rampa",

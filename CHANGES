@@ -9,6 +9,31 @@
 _Notes on the upcoming release will go here._
 <!-- END PLACEHOLDER - ADD NEW CHANGELOG ENTRIES BELOW THIS LINE -->
 
+### What's new
+
+#### Prebuilt wheels for Linux, macOS, and Windows (#21)
+
+Installing rampa no longer needs a Rust toolchain on the common platforms.
+Each release ships wheels for Python 3.14 and 3.15, including their
+free-threaded builds, for:
+
+- Linux on x86_64 and ARM64, with glibc 2.28 or newer, or musl (Alpine)
+- macOS on Apple silicon and Intel
+- Windows on x64 and ARM64
+
+Linux wheels need glibc 2.28 (was 2.34), so they install on RHEL 8, Debian 11,
+and Ubuntu 20.04. Other platforms install from the source distribution, which
+needs Rust.
+
+### Fixes
+
+#### Python 3.15 support (#21)
+
+rampa installs and runs on Python 3.15. Installing rampa 0.0.1a2 on Python
+3.15 needed a Rust toolchain and then failed, because its Rust accelerator
+was built with PyO3 0.25, which refuses any Python newer than 3.14. The
+accelerator now builds with PyO3 0.30, and `rampa --help` works on 3.15.
+
 ## rampa 0.0.1a2 (2026-09-06)
 
 rampa 0.0.1a2 moves the MCP server to FastMCP 4 and makes its tools describe
