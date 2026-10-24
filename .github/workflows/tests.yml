@@ -5,6 +5,7 @@ on:
     branches: [main]
     tags: ['v*']
   pull_request:
+  workflow_dispatch:
 
 env:
   # Run against each installed wheel: the extension must be the build for
@@ -60,8 +61,33 @@ jobs:
       - name: Tests (pytest)
         run: uv run pytest
 
+  changes:
+    # Wheels only change with the Rust code, packaging metadata, or this
+    # workflow; tags and manual runs build them regardless.
+    if: github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/') || github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    outputs:
+      packaging: ${{ steps.filter.outputs.packaging }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dorny/paths-filter@v4
+        id: filter
+        with:
+          filters: |
+            packaging:
+              - 'rust/**'
+              - pyproject.toml
+              - uv.lock
+              - .github/workflows/tests.yml
+
   wheels:
     name: wheels (${{ matrix.platform.name }})
+    needs: changes
+    if: >-
+      !cancelled() && !failure()
+      && (needs.changes.outputs.packaging == 'true'
+          || github.event_name == 'workflow_dispatch'
+          || startsWith(github.ref, 'refs/tags/'))
     runs-on: ${{ matrix.platform.runner }}
     strategy:
       fail-fast: false
@@ -176,6 +202,12 @@ jobs:
           if-no-files-found: error
 
   sdist:
+    needs: changes
+    if: >-
+      !cancelled() && !failure()
+      && (needs.changes.outputs.packaging == 'true'
+          || github.event_name == 'workflow_dispatch'
+          || startsWith(github.ref, 'refs/tags/'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
