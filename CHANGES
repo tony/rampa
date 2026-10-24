@@ -9,6 +9,15 @@
 _Notes on the upcoming release will go here._
 <!-- END PLACEHOLDER - ADD NEW CHANGELOG ENTRIES BELOW THIS LINE -->
 
+### Fixes
+
+#### Python 3.15 support (#21)
+
+rampa installs and runs on Python 3.15. Installing rampa 0.0.1a2 on Python
+3.15 needed a Rust toolchain and then failed, because its Rust accelerator
+was built with PyO3 0.25, which refuses any Python newer than 3.14. The
+accelerator now builds with PyO3 0.30, and `rampa --help` works on 3.15.
+
 ## rampa 0.0.1a2 (2026-09-06)
 
 rampa 0.0.1a2 moves the MCP server to FastMCP 4 and makes its tools describe
