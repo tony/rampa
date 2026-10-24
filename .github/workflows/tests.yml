@@ -185,7 +185,7 @@ jobs:
         run: |
           ls -1 dist
           docker run --rm -e WHEEL_SMOKE -v "$PWD/dist:/dist:ro" \
-            ghcr.io/astral-sh/uv:0.13.1-alpine sh -euc '
+            ghcr.io/astral-sh/uv:0.13.4-alpine sh -euc '
               uv python install 3.14 3.15 3.14t 3.15t
               export VIRTUAL_ENV=/tmp/smoke
               for python in 3.14+gil 3.15+gil 3.14t 3.15t; do
