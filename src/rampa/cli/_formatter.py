@@ -38,8 +38,9 @@ OPTIONS_FLAG_ONLY = frozenset(
 class _HelpTheme(t.Protocol):
     """Protocol for the argparse color theme.
 
-    Python 3.14+ sets ``self._theme`` on ``HelpFormatter`` instances
-    via ``_colorize.get_theme().argparse``.
+    Python 3.14+ exposes ``_colorize.get_theme().argparse`` as ``_theme`` on
+    ``HelpFormatter`` instances (an attribute on 3.14, a read-only property on
+    3.15).
     """
 
     heading: str
@@ -54,8 +55,9 @@ class _HelpTheme(t.Protocol):
 class RampaHelpFormatter(argparse.RawDescriptionHelpFormatter):
     """Extend Python 3.14+ native help colors with example-block colorization.
 
-    When ``_theme`` is ``None`` (older Python or ``NO_COLOR`` set),
-    ``_fill_text`` falls through to the base class unchanged.
+    Examples follow argparse's own theme, so they share its on/off decision
+    (``NO_COLOR``, ``FORCE_COLOR``, the output stream) and palette with the
+    usage line. The formatter only reads ``_theme``: argparse owns that name.
 
     Examples
     --------
@@ -63,6 +65,16 @@ class RampaHelpFormatter(argparse.RawDescriptionHelpFormatter):
     >>> formatter  # doctest: +ELLIPSIS
     <...RampaHelpFormatter object at ...>
     """
+
+    def _example_theme(self) -> _HelpTheme | None:
+        """Return argparse's help theme, the palette for example sections.
+
+        Examples
+        --------
+        >>> RampaHelpFormatter("rampa")._example_theme() is not None
+        True
+        """
+        return t.cast("_HelpTheme | None", getattr(self, "_theme", None))
 
     def _fill_text(self, text: str, width: int, indent: str) -> str:
         """Fill text, colorizing example sections if theme is available.
@@ -73,7 +85,7 @@ class RampaHelpFormatter(argparse.RawDescriptionHelpFormatter):
         >>> formatter._fill_text("hello", 80, "")
         'hello'
         """
-        theme = t.cast("_HelpTheme | None", getattr(self, "_theme", None))
+        theme = self._example_theme()
         if not text or theme is None:
             return super()._fill_text(text, width, indent)
 
@@ -150,11 +162,11 @@ class RampaHelpFormatter(argparse.RawDescriptionHelpFormatter):
 
         Examples
         --------
-        >>> from rampa.cli._formatter import HelpTheme
+        With argparse's theme for uncolored output, the line is unchanged:
+
         >>> formatter = RampaHelpFormatter("test")
-        >>> theme = HelpTheme.from_colors(None)
         >>> result = formatter._colorize_example_line(
-        ...     "rampa run", theme=theme, expect_value=False
+        ...     "rampa run", theme=formatter._example_theme(), expect_value=False
         ... )
         >>> result.text
         'rampa run'
@@ -199,125 +211,3 @@ class RampaHelpFormatter(argparse.RawDescriptionHelpFormatter):
                 parts.append(token)
 
         return self._ColorizedLine(text="".join(parts), expect_value=expecting_value)
-
-
-class HelpTheme(t.NamedTuple):
-    """Theme colors for help output.
-
-    Each field holds the ANSI escape prefix applied to one kind of token in the help
-    text, with ``reset`` closing it. An empty string means colors are disabled, so
-    applying the theme leaves the text unchanged.
-
-    Attributes
-    ----------
-    prog : str
-        Prefix for the program name, the first token of an example command line.
-    action : str
-        Prefix for the subcommand following the program name.
-    long_option : str
-        Prefix for a ``--long`` option token.
-    short_option : str
-        Prefix for a ``-s`` option token.
-    label : str
-        Prefix for the value token that follows an option expecting an argument.
-    heading : str
-        Prefix for an ``Examples:`` section heading line.
-    reset : str
-        Sequence appended after a colored token to restore default terminal styling.
-
-    Examples
-    --------
-    >>> theme = HelpTheme.from_colors(None)
-    >>> theme.reset
-    ''
-    """
-
-    prog: str
-    action: str
-    long_option: str
-    short_option: str
-    label: str
-    heading: str
-    reset: str
-
-    @classmethod
-    def from_colors(cls, colors: t.Any) -> HelpTheme:
-        """Create theme from Colors instance.
-
-        Parameters
-        ----------
-        colors : Colors | None
-            Colors instance, or None for no colors.
-
-        Returns
-        -------
-        HelpTheme
-            Theme with ANSI codes if enabled, empty strings otherwise.
-
-        Examples
-        --------
-        >>> HelpTheme.from_colors(None).reset
-        ''
-        """
-        if colors is None or not colors._enabled:
-            return cls(
-                prog="",
-                action="",
-                long_option="",
-                short_option="",
-                label="",
-                heading="",
-                reset="",
-            )
-
-        from rampa.cli._colors import style
-
-        return cls(
-            prog=style("", fg="magenta", bold=True).removesuffix("\033[0m"),
-            action=style("", fg="cyan").removesuffix("\033[0m"),
-            long_option=style("", fg="green").removesuffix("\033[0m"),
-            short_option=style("", fg="green").removesuffix("\033[0m"),
-            label=style("", fg="yellow").removesuffix("\033[0m"),
-            heading=style("", fg="blue").removesuffix("\033[0m"),
-            reset="\033[0m",
-        )
-
-
-def create_themed_formatter(
-    colors: t.Any | None = None,
-) -> type[RampaHelpFormatter]:
-    """Create a help formatter class with theme bound.
-
-    Parameters
-    ----------
-    colors : Colors | None
-        Colors instance. If None, uses ColorMode.AUTO.
-
-    Returns
-    -------
-    type[RampaHelpFormatter]
-        Formatter class with theme bound.
-
-    Examples
-    --------
-    >>> from rampa.cli._colors import ColorMode, Colors
-    >>> formatter_cls = create_themed_formatter(Colors(ColorMode.NEVER))
-    >>> formatter = formatter_cls("test")
-    >>> formatter._theme is None
-    True
-    """
-    from rampa.cli._colors import ColorMode, Colors
-
-    if colors is None:
-        colors = Colors(ColorMode.AUTO)
-
-    theme = HelpTheme.from_colors(colors) if colors._enabled else None
-
-    class ThemedRampaHelpFormatter(RampaHelpFormatter):
-        """RampaHelpFormatter with theme pre-configured."""
-
-        def __init__(self, prog: str, **kwargs: t.Any) -> None:
-            super().__init__(prog, **kwargs)
-            self._theme = theme
-
-    return ThemedRampaHelpFormatter
