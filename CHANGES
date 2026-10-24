@@ -1,13 +1,20 @@
 # Changelog
 
 
-## rampa 0.0.1a3 (unreleased)
+## rampa 0.0.1a4 (unreleased)
 
 <!-- To maintainers and contributors: Please add notes for the forthcoming version below -->
 
 <!-- KEEP THIS PLACEHOLDER - DO NOT REMOVE OR MODIFY THIS LINE -->
 _Notes on the upcoming release will go here._
 <!-- END PLACEHOLDER - ADD NEW CHANGELOG ENTRIES BELOW THIS LINE -->
+
+## rampa 0.0.1a3 (2026-10-24)
+
+rampa 0.0.1a3 installs and runs on Python 3.15, which 0.0.1a2 could not be
+installed on. It is also the first release with prebuilt wheels: Python 3.14
+and 3.15, free-threaded builds included, on Linux, macOS, and Windows, so
+installing rampa no longer needs a Rust toolchain on those platforms.
 
 ### What's new
 
