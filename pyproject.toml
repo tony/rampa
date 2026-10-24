@@ -70,7 +70,7 @@ dev = [
   "pytest-rerunfailures",
   "pytest-watcher",
   # Build (Rust extension)
-  "maturin>=1.0,<2.0",
+  "maturin>=1.9.4,<2.0",
   # Scripts
   "tomlkit>=0.13",
   # Lint / typecheck (extras needed for ty resolution)
@@ -90,7 +90,7 @@ docs = [
 ]
 
 [build-system]
-requires = ["maturin>=1.0,<2.0"]
+requires = ["maturin>=1.9.4,<2.0"]
 build-backend = "maturin"
 
 [tool.uv]

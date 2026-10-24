@@ -1800,7 +1800,7 @@ dev = [
     { name = "fastmcp", specifier = ">=4.0,<5.0" },
     { name = "gp-sphinx", specifier = "==0.1.0a39" },
     { name = "grpcio", specifier = ">=1.70" },
-    { name = "maturin", specifier = ">=1.0,<2.0" },
+    { name = "maturin", specifier = ">=1.9.4,<2.0" },
     { name = "pytest" },
     { name = "pytest-rerunfailures" },
     { name = "pytest-watcher" },
