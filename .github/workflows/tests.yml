@@ -6,6 +6,32 @@ on:
     tags: ['v*']
   pull_request:
 
+env:
+  # Run against each installed wheel: the extension must be the build for
+  # this exact interpreter, must leave a free-threaded interpreter's GIL
+  # off, and must back rampa's trend sink.
+  WHEEL_SMOKE: |
+    import importlib.util, pathlib, sys, sysconfig
+    from importlib.machinery import EXTENSION_SUFFIXES
+
+    free_threaded = bool(sysconfig.get_config_var("Py_GIL_DISABLED"))
+    package = pathlib.Path(sysconfig.get_path("platlib"), "rampa")
+    (path,) = [p for p in package.glob("_core.*") if p.suffix in {".so", ".pyd"}]
+    assert path.name.endswith(EXTENSION_SUFFIXES[0]), (path.name, EXTENSION_SUFFIXES[0])
+    spec = importlib.util.spec_from_file_location("rampa._core", path)
+    core = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(core)
+    sys.modules["rampa._core"] = core
+    if free_threaded:
+        assert not sys._is_gil_enabled(), "rampa._core turned the GIL back on"
+
+    from rampa.metrics import HdrTrendSink
+
+    sink = HdrTrendSink()
+    sink.add(12.5)
+    assert sink.format(1.0)["count"] == 1.0
+    print(sys.version.split()[0], "free-threaded" if free_threaded else "GIL", path.name)
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -33,6 +59,121 @@ jobs:
         run: uv run ty check --output-format github
       - name: Tests (pytest)
         run: uv run pytest
+
+  wheels:
+    name: wheels (${{ matrix.platform.name }})
+    runs-on: ${{ matrix.platform.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - name: linux-x86_64
+            runner: ubuntu-24.04
+            target: x86_64
+            manylinux: "2_28"
+          - name: linux-aarch64
+            runner: ubuntu-24.04-arm
+            target: aarch64
+            manylinux: "2_28"
+          - name: musllinux-x86_64
+            runner: ubuntu-24.04
+            target: x86_64
+            manylinux: musllinux_1_2
+            musl: true
+          - name: musllinux-aarch64
+            runner: ubuntu-24.04-arm
+            target: aarch64
+            manylinux: musllinux_1_2
+            musl: true
+          - name: macos-arm64
+            runner: macos-15
+            target: aarch64
+          - name: macos-x86_64
+            runner: macos-15-intel
+            target: x86_64
+          - name: windows-x64
+            runner: windows-2025
+            target: x86_64
+          - name: windows-arm64
+            runner: windows-11-arm
+            target: aarch64
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          version-file: .tool-versions
+      - name: Choose the build interpreters
+        id: interpreters
+        run: |
+          set -euo pipefail
+          if [ "$RUNNER_OS" = Linux ]; then
+            # maturin-action builds inside the manylinux/musllinux image,
+            # which carries its own interpreters.
+            echo "list=python3.14 python3.15 python3.14t python3.15t" >> "$GITHUB_OUTPUT"
+          else
+            # Name each interpreter by path: a bare 3.14 can resolve to a
+            # free-threaded build that comes first on PATH.
+            uv python install 3.14 3.15 3.14t 3.15t
+            list=$(for v in 3.14+gil 3.15+gil 3.14t 3.15t; do
+              path=$(uv python find --managed-python "$v")
+              # Forward slashes: the action splits its args like a shell.
+              [ "$RUNNER_OS" = Windows ] && path=$(cygpath -m "$path")
+              printf '%s ' "$path"
+            done)
+            echo "list=$list" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.platform.target }}
+          manylinux: ${{ matrix.platform.manylinux || 'auto' }}
+          rust-toolchain: stable
+          args: >-
+            --release
+            --locked
+            --out dist
+            --compatibility pypi
+            -i ${{ steps.interpreters.outputs.list }}
+      - name: Smoke-test each wheel
+        if: ${{ !matrix.platform.musl }}
+        run: |
+          set -euo pipefail
+          ls -1 dist
+          # `+gil` only matches installed interpreters; install them first.
+          uv python install 3.14 3.15 3.14t 3.15t
+          export VIRTUAL_ENV="$RUNNER_TEMP/smoke"
+          bin="$VIRTUAL_ENV/bin"
+          [ "$RUNNER_OS" = Windows ] && bin="$VIRTUAL_ENV/Scripts"
+          for python in 3.14+gil 3.15+gil 3.14t 3.15t; do
+            uv venv --clear --python "$python" "$VIRTUAL_ENV"
+            uv pip install --no-index --no-deps --no-build --find-links dist rampa
+            uv pip install --find-links dist rampa
+            "$bin/python" -c "$WHEEL_SMOKE"
+            "$bin/rampa" --version
+          done
+      - name: Smoke-test each wheel (Alpine)
+        if: ${{ matrix.platform.musl }}
+        run: |
+          ls -1 dist
+          docker run --rm -e WHEEL_SMOKE -v "$PWD/dist:/dist:ro" \
+            ghcr.io/astral-sh/uv:0.13.1-alpine sh -euc '
+              uv python install 3.14 3.15 3.14t 3.15t
+              export VIRTUAL_ENV=/tmp/smoke
+              for python in 3.14+gil 3.15+gil 3.14t 3.15t; do
+                uv venv --clear --python "$python" "$VIRTUAL_ENV"
+                uv pip install --no-index --no-deps --no-build --find-links /dist rampa
+                uv pip install --find-links /dist rampa
+                "$VIRTUAL_ENV/bin/python" -c "$WHEEL_SMOKE"
+                "$VIRTUAL_ENV/bin/rampa" --version
+              done'
+      - uses: actions/upload-artifact@v7
+        with:
+          name: wheels-${{ matrix.platform.name }}
+          path: dist
+          if-no-files-found: error
 
   release:
     runs-on: ubuntu-latest
