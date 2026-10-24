@@ -197,11 +197,18 @@ Never create tags. Never push tags. The owner handles tagging and tag
 pushes, because a tag triggers the publish workflow. See
 [Release commits](WRITING.md#release-commits).
 
-Pushing a tag matching `v*` runs the `release` job in
-`.github/workflows/tests.yml`: it builds the sdist and wheel with
-`maturin` and publishes them to PyPI with trusted-publisher
-attestations. A contributor's part of a release stops at a `CHANGES`
-entry; cutting the release itself is the owner's job.
+Pushing a tag matching `v*` runs `.github/workflows/tests.yml` through
+to its `release` job. The `wheels` job builds the Linux, macOS, and
+Windows wheels with `maturin` and installs each one on its own
+platform and interpreter, the `sdist` job builds the sdist and a wheel
+from it, `dist` checks that every expected wheel is there, and
+`release` publishes them all to PyPI with trusted-publisher
+attestations. Every job short of `release` also runs on pull requests
+that change `rust/`, `pyproject.toml`, `uv.lock`, or the workflow, and
+on demand from "Run workflow" in the Actions tab, so a tag only
+publishes builds that already passed. A contributor's part of a
+release stops at a `CHANGES` entry; cutting the release itself is the
+owner's job.
 
 ## Pull requests
 
