@@ -9,6 +9,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      UV_PYTHON: ${{ matrix.python-version }}
     strategy:
       fail-fast: false
       matrix:
@@ -39,6 +41,8 @@ jobs:
     permissions:
       id-token: write
       attestations: write
+    env:
+      UV_PYTHON: ${{ matrix.python-version }}
 
     strategy:
       matrix:
