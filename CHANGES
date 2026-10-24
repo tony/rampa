@@ -9,6 +9,22 @@
 _Notes on the upcoming release will go here._
 <!-- END PLACEHOLDER - ADD NEW CHANGELOG ENTRIES BELOW THIS LINE -->
 
+### What's new
+
+#### Prebuilt wheels for Linux, macOS, and Windows (#21)
+
+Installing rampa no longer needs a Rust toolchain on the common platforms.
+Each release ships wheels for Python 3.14 and 3.15, including their
+free-threaded builds, for:
+
+- Linux on x86_64 and ARM64, with glibc 2.28 or newer, or musl (Alpine)
+- macOS on Apple silicon and Intel
+- Windows on x64 and ARM64
+
+Linux wheels need glibc 2.28 (was 2.34), so they install on RHEL 8, Debian 11,
+and Ubuntu 20.04. Other platforms install from the source distribution, which
+needs Rust.
+
 ### Fixes
 
 #### Python 3.15 support (#21)
