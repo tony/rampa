@@ -17,19 +17,22 @@ deliberately decides nothing technical. Each capability below is stated as an as
 be achievable by a concrete exemplar in an existing project, and handed to a named follow-up ADR
 where the actual design will be argued.
 
-The aspirations are grounded in a study of how six production load generators work — locust,
-vegeta, hey, wrk, jmeter, artillery — and how Python projects borrow native speed from Rust
-(polars, pyo3, pydantic-core, cython). The recurring lessons from that study shape the vision: the
-per-request path is I/O-bound everywhere, honest measurement depends on the scheduling model, and
-every mature tool reduces metrics with a bounded, mergeable summary.
+The aspirations are grounded in a study of production load generators and control planes — locust,
+vegeta, hey, wrk, jmeter, goose, and Distributed Load Testing on AWS — and how Python projects
+borrow native speed from Rust (polars, pyo3, pydantic-core, cython). The recurring lessons from
+that study shape the vision: the per-request path is I/O-bound everywhere, honest measurement
+depends on the scheduling model, and every mature tool reduces metrics with a bounded, mergeable
+summary.
 
 ## Decision
 
 rampa's vision rests on one spine: **a single contract surface, progressively disclosed across
-scale, honest about what it measures, Python-first with optional acceleration.** The same scenario
-a developer runs on a laptop runs unchanged at high throughput on one host and across a distributed
-fleet, producing comparable results. We name those scales for what they are — **single-process**,
-**multi-process**, and **distributed**.
+scale, honest about what it measures, Python-first with optional acceleration.** The same semantic
+scenario contract a developer runs on a laptop runs at high throughput on one host and across a
+distributed fleet, producing comparable results. When execution moves off-host, a driver may require
+a portable behavior reference, code bundle, environment spec, and capability check before the run
+starts. We name those scales for what they are — **single-process**, **multi-process**, and
+**distributed**.
 
 This ADR commits only to the direction and to the evidence that it is achievable. The technical
 decisions are the subject of the follow-up ADRs named throughout.
@@ -44,23 +47,30 @@ existing behavior on its own.
 
 ### 1. Progressive disclosure of scale
 
-A load test should be trivial to run on a laptop and scale — unchanged — to a high-throughput
-single host and then to a distributed fleet, with results that remain comparable across all three.
-The user names the scale (single-process, multi-process, distributed); the scenario, metrics, and
-thresholds do not change.
+A load test should be trivial to run on a laptop and scale by preserving the same semantic scenario
+contract on a high-throughput single host and then across a distributed fleet, with results that
+remain comparable across all three. The user names the scale (single-process, multi-process,
+distributed); scenario behavior, metrics, and thresholds retain the same meaning. Remote or
+distributed execution may still require a portable behavior reference, code bundle, environment
+spec, and capability check before the run starts.
 
 Achievable: locust runs the same user classes in a single process or across a ZeroMQ master/worker
-fleet — see [`locust/runners.py`](https://github.com/locustio/locust/blob/2.44.0/locust/runners.py);
-artillery runs the same script locally or fanned out across AWS Lambda/Fargate.
+fleet — see [`locust/runners.py`](https://github.com/locustio/locust/blob/2.44.0/locust/runners.py).
+Distributed Load Testing on AWS fans task-runner containers through a Step Functions control plane
+and task definition, showing the cloud-fleet shape without changing the scenario owner
+([`step-functions.ts`](https://github.com/aws-solutions/distributed-load-testing-on-aws/blob/v4.1.0/source/infrastructure/lib/back-end/step-functions.ts),
+[`task-definition.ts`](https://github.com/aws-solutions/distributed-load-testing-on-aws/blob/v4.1.0/source/task-runner/src/task-definition.ts)).
 
 → Follow-up ADR: scale modes (single-process / multi-process / distributed).
 
 ### 2. Measurement integrity under load
 
-The numbers must stay honest when the target is overloaded — the moment they matter most. That
-means open-loop arrival modeling, monotonic timing, recording scheduled-versus-actual start time,
-and resistance to coordinated omission, so a slow target reduces neither the offered load nor the
-reported tail latency silently.
+The numbers must stay honest when the target is overloaded — the moment they matter most. For
+offered-load tests, that means open-loop arrival modeling, monotonic timing, recording
+scheduled-versus-actual start time, and resistance to coordinated omission, so a slow target
+reduces neither the offered load nor the reported tail latency silently. Closed-loop VU journeys
+remain first-class when the desired model is user-journey throughput rather than an external
+arrival process; rampa must distinguish the modes instead of blurring their semantics.
 
 Achievable: vegeta's pacer fires on a schedule independent of in-flight latency and catches up when
 behind — see [`lib/pacer.go`](https://github.com/tsenart/vegeta/blob/v12.13.0/lib/pacer.go); wrk
@@ -75,9 +85,13 @@ open-model thread group years later is the cautionary counter-example.
 HTTP/1.1 and HTTP/2, WebSocket, and gRPC should share one scenario API, one metric vocabulary, and
 one threshold language. A user learns the contract once; protocols are pluggable engines beneath it.
 
-Achievable: artillery drives each protocol through a separate engine behind one runner — the HTTP
-engine in [`packages/core/lib/engine_http.js`](https://github.com/artilleryio/artillery/blob/artillery-2.0.32/packages/core/lib/engine_http.js)
-sits beside sibling engine packages, all emitting the same metric shape.
+Achievable: jmeter keeps protocol-specific samplers behind one test-plan and result contract:
+HTTP, TCP, and Java samplers live in separate protocol modules, while common assertions operate on
+their sample results
+([`HTTPSamplerBase.java`](https://github.com/apache/jmeter/blob/rel/v5.6.3/src/protocol/http/src/main/java/org/apache/jmeter/protocol/http/sampler/HTTPSamplerBase.java),
+[`TCPSampler.java`](https://github.com/apache/jmeter/blob/rel/v5.6.3/src/protocol/tcp/src/main/java/org/apache/jmeter/protocol/tcp/sampler/TCPSampler.java),
+[`JavaSampler.java`](https://github.com/apache/jmeter/blob/rel/v5.6.3/src/protocol/java/src/main/java/org/apache/jmeter/protocol/java/sampler/JavaSampler.java),
+[`ResponseAssertion.java`](https://github.com/apache/jmeter/blob/rel/v5.6.3/src/components/src/main/java/org/apache/jmeter/assertions/ResponseAssertion.java)).
 
 → Follow-up ADR: protocol client engines.
 
@@ -89,8 +103,8 @@ must understand. Arbitrary Python always runs in Python.
 
 Achievable: locust scenarios are plain Python classes and weighted tasks — see
 [`locust/user/task.py`](https://github.com/locustio/locust/blob/2.44.0/locust/user/task.py);
-artillery offers a declarative `flow` for the common case alongside imperative JavaScript hooks for
-the rest.
+jmeter's sampler tree shows the declarative counterpart: a portable plan can name protocol
+elements without embedding arbitrary runtime code.
 
 → Follow-up ADR: scenario API and the native execution mode (under ADR 003).
 
@@ -100,8 +114,9 @@ A load test should answer "did it pass?", not just "how fast was it?". Per-reque
 header, body shape) and post-aggregate SLO thresholds (`p99 < 500ms`, `error_rate < 1%`) drive an
 abort decision and a CI exit code.
 
-Achievable: artillery's `ensure` plugin turns aggregate thresholds into a pass/fail gate — see
-[`packages/artillery-plugin-ensure/index.js`](https://github.com/artilleryio/artillery/blob/artillery-2.0.32/packages/artillery-plugin-ensure/index.js).
+Achievable: jmeter turns checks into assertion results attached to samples, giving the runner a
+first-class pass/fail signal to aggregate and report
+([`ResponseAssertion.java`](https://github.com/apache/jmeter/blob/rel/v5.6.3/src/components/src/main/java/org/apache/jmeter/assertions/ResponseAssertion.java)).
 
 → Follow-up ADR: checks & thresholds.
 
@@ -125,8 +140,7 @@ measurement hot path.
 
 Achievable: jmeter streams live metrics through an asynchronous backend-listener queue to
 Graphite/InfluxDB without slowing the samplers — see
-[`.../visualizers/backend/BackendListener.java`](https://github.com/apache/jmeter/blob/rel/v5.6.3/src/components/src/main/java/org/apache/jmeter/visualizers/backend/BackendListener.java);
-artillery ships a publish-metrics plugin family for the same.
+[`.../visualizers/backend/BackendListener.java`](https://github.com/apache/jmeter/blob/rel/v5.6.3/src/components/src/main/java/org/apache/jmeter/visualizers/backend/BackendListener.java).
 
 → Follow-up ADR: outputs & exporters.
 
@@ -159,13 +173,13 @@ commitment to order or scope.
 
 | Aspiration | Lead exemplar | Covered feature areas | Follow-up ADR (proposed) |
 |---|---|---|---|
-| 1 Progressive scale | locust, artillery | single-process, multi-process, distributed execution | scale modes |
+| 1 Progressive scale | locust, Distributed Load Testing on AWS | single-process, multi-process, distributed execution | scale modes |
 | 2 Measurement integrity | vegeta, wrk | open-loop scheduling, drift, coordinated omission, monotonic timing | execution & scheduling model |
-| 3 Multi-protocol contract | artillery | HTTP, WebSocket, gRPC, custom clients | protocol client engines |
-| 4 Python + declarative subset | locust, artillery | async Python scenarios, setup/teardown data, declarative native subset | scenario API + native execution mode |
-| 5 Pass/fail product | artillery | checks, thresholds, CI exit codes | checks & thresholds |
+| 3 Multi-protocol contract | jmeter | HTTP, WebSocket, gRPC, custom clients | protocol client engines |
+| 4 Python + declarative subset | locust, jmeter | async Python scenarios, setup/teardown data, declarative native subset | scenario API + native execution mode |
+| 5 Pass/fail product | jmeter | checks, thresholds, CI exit codes | checks & thresholds |
 | 6 Mergeable metrics | vegeta, locust | counters, rates, trends, mergeable summaries, storage layout | metric engine & storage |
-| 7 Observability / outputs | jmeter, artillery | console, JSON/CSV artifacts, GitHub Actions, InfluxDB, Prometheus, OTEL, webhook | outputs & exporters |
+| 7 Observability / outputs | jmeter | console, JSON/CSV artifacts, GitHub Actions, InfluxDB, Prometheus, OTEL, webhook | outputs & exporters |
 | 8 Python-first + optional Rust | polars, cython | accelerator, engine, worker boundaries | Rust acceleration map |
 
 ## Deferred to follow-up ADRs
@@ -233,13 +247,17 @@ names will decide how.
   [`src/stats.c`](https://github.com/wg/wrk/blob/4.2.0/src/stats.c).
 - **hey** (`rakyll/hey@v0.1.5`) — minimal closed-loop worker pool (the simple baseline / contrast):
   [`requester/requester.go`](https://github.com/rakyll/hey/blob/v0.1.5/requester/requester.go).
-- **jmeter** (`apache/jmeter@rel/v5.6.3`) — assertions and off-hot-path streaming metrics:
+- **jmeter** (`apache/jmeter@rel/v5.6.3`) — protocol samplers, assertions, and off-hot-path
+  streaming metrics:
+  [`protocol/http/.../HTTPSamplerBase.java`](https://github.com/apache/jmeter/blob/rel/v5.6.3/src/protocol/http/src/main/java/org/apache/jmeter/protocol/http/sampler/HTTPSamplerBase.java),
+  [`protocol/tcp/.../TCPSampler.java`](https://github.com/apache/jmeter/blob/rel/v5.6.3/src/protocol/tcp/src/main/java/org/apache/jmeter/protocol/tcp/sampler/TCPSampler.java),
+  [`protocol/java/.../JavaSampler.java`](https://github.com/apache/jmeter/blob/rel/v5.6.3/src/protocol/java/src/main/java/org/apache/jmeter/protocol/java/sampler/JavaSampler.java),
   [`assertions/ResponseAssertion.java`](https://github.com/apache/jmeter/blob/rel/v5.6.3/src/components/src/main/java/org/apache/jmeter/assertions/ResponseAssertion.java),
   [`visualizers/backend/BackendListener.java`](https://github.com/apache/jmeter/blob/rel/v5.6.3/src/components/src/main/java/org/apache/jmeter/visualizers/backend/BackendListener.java).
-- **artillery** (`artilleryio/artillery@artillery-2.0.32`) — multi-protocol engines, declarative
-  flow, and threshold gating:
-  [`packages/core/lib/engine_http.js`](https://github.com/artilleryio/artillery/blob/artillery-2.0.32/packages/core/lib/engine_http.js),
-  [`packages/artillery-plugin-ensure/index.js`](https://github.com/artilleryio/artillery/blob/artillery-2.0.32/packages/artillery-plugin-ensure/index.js).
+- **Distributed Load Testing on AWS** (`aws-solutions/distributed-load-testing-on-aws@v4.1.0`) —
+  cloud control plane and task-runner fan-out:
+  [`step-functions.ts`](https://github.com/aws-solutions/distributed-load-testing-on-aws/blob/v4.1.0/source/infrastructure/lib/back-end/step-functions.ts),
+  [`task-definition.ts`](https://github.com/aws-solutions/distributed-load-testing-on-aws/blob/v4.1.0/source/task-runner/src/task-definition.ts).
 - **polars** (`pola-rs/polars@rs-0.53.0`) — Python builds a plan, Rust executes it with the GIL
   released, behind a thin binding:
   [`crates/polars-python/src/lazyframe/general.rs`](https://github.com/pola-rs/polars/blob/rs-0.53.0/crates/polars-python/src/lazyframe/general.rs).
