@@ -122,7 +122,7 @@ def _compress(data: bytes) -> tuple[bytes, str]:
     True
     """
     try:
-        import snappy  # ty: ignore[unresolved-import]
+        import snappy  # ty: ignore[import-not-found]
 
         return snappy.compress(data), "snappy"
     except ImportError:

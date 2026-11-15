@@ -112,7 +112,7 @@ def encode(envelope: Envelope, fmt: WireFormat = WireFormat.JSON) -> bytes:
     }
     if fmt == WireFormat.MSGPACK:
         try:
-            import msgpack  # ty: ignore[unresolved-import]
+            import msgpack  # ty: ignore[import-not-found]
 
             return msgpack.packb(d)
         except ImportError:
@@ -149,7 +149,7 @@ def decode(data: bytes, fmt: WireFormat = WireFormat.JSON) -> Envelope:
     """
     if fmt == WireFormat.MSGPACK:
         try:
-            import msgpack  # ty: ignore[unresolved-import]
+            import msgpack  # ty: ignore[import-not-found]
 
             d = msgpack.unpackb(data, raw=False)
         except ImportError:

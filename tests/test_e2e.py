@@ -32,7 +32,7 @@ async def _start_test_server() -> tuple[web.AppRunner, int]:
     await runner.setup()
     site = web.TCPSite(runner, "127.0.0.1", 0)
     await site.start()
-    addr = site._server.sockets[0].getsockname()  # ty: ignore[unresolved-attribute]
+    addr = site._server.sockets[0].getsockname()  # ty: ignore[missing-attribute]
     return runner, addr[1]
 
 

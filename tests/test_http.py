@@ -45,7 +45,7 @@ def test_http_get_emits_metrics() -> None:
         site = web.TCPSite(runner, "127.0.0.1", 0)
         await site.start()
 
-        addr = site._server.sockets[0].getsockname()  # ty: ignore[unresolved-attribute]
+        addr = site._server.sockets[0].getsockname()  # ty: ignore[missing-attribute]
         port = addr[1]
 
         sq: queue.SimpleQueue[Sample | None] = queue.SimpleQueue()
@@ -85,7 +85,7 @@ def test_http_get_error_marks_failed() -> None:
         site = web.TCPSite(runner, "127.0.0.1", 0)
         await site.start()
 
-        addr = site._server.sockets[0].getsockname()  # ty: ignore[unresolved-attribute]
+        addr = site._server.sockets[0].getsockname()  # ty: ignore[missing-attribute]
         port = addr[1]
 
         sq: queue.SimpleQueue[Sample | None] = queue.SimpleQueue()
@@ -119,7 +119,7 @@ def test_http_post() -> None:
         site = web.TCPSite(runner, "127.0.0.1", 0)
         await site.start()
 
-        addr = site._server.sockets[0].getsockname()  # ty: ignore[unresolved-attribute]
+        addr = site._server.sockets[0].getsockname()  # ty: ignore[missing-attribute]
         port = addr[1]
 
         sq: queue.SimpleQueue[Sample | None] = queue.SimpleQueue()
@@ -154,7 +154,7 @@ def test_http_response_text_and_json() -> None:
         site = web.TCPSite(runner, "127.0.0.1", 0)
         await site.start()
 
-        addr = site._server.sockets[0].getsockname()  # ty: ignore[unresolved-attribute]
+        addr = site._server.sockets[0].getsockname()  # ty: ignore[missing-attribute]
         port = addr[1]
 
         sq: queue.SimpleQueue[Sample | None] = queue.SimpleQueue()
@@ -181,7 +181,7 @@ def test_http_tags_include_method_and_status() -> None:
         site = web.TCPSite(runner, "127.0.0.1", 0)
         await site.start()
 
-        addr = site._server.sockets[0].getsockname()  # ty: ignore[unresolved-attribute]
+        addr = site._server.sockets[0].getsockname()  # ty: ignore[missing-attribute]
         port = addr[1]
 
         sq: queue.SimpleQueue[Sample | None] = queue.SimpleQueue()
