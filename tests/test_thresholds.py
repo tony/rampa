@@ -10,6 +10,8 @@ from rampa.metrics import CounterSink, RateSink, TrendSink
 from rampa.thresholds import (
     Threshold,
     evaluate_threshold,
+    evaluate_threshold_value,
+    evaluate_threshold_values,
     evaluate_thresholds,
     parse_submetric,
     parse_threshold,
@@ -233,3 +235,69 @@ def test_evaluate_thresholds_with_submetric() -> None:
     assert len(results) == 1
     assert results[0].passed is True
     assert results[0].lhs == 15.0
+
+
+# --- Value-native threshold evaluation tests ---
+
+
+def test_evaluate_threshold_value_passes() -> None:
+    """evaluate_threshold_value passes when condition is met."""
+    threshold = Threshold(
+        source="count>=100",
+        expression=parse_threshold("count>=100"),
+    )
+    result = evaluate_threshold_value(threshold, {"count": 150.0, "rate": 15.0})
+    assert result.passed is True
+    assert result.lhs == 150.0
+    assert result.rhs == 100.0
+
+
+def test_evaluate_threshold_value_fails() -> None:
+    """evaluate_threshold_value fails when condition is not met."""
+    threshold = Threshold(
+        source="count>=100",
+        expression=parse_threshold("count>=100"),
+    )
+    result = evaluate_threshold_value(threshold, {"count": 50.0, "rate": 5.0})
+    assert result.passed is False
+    assert result.lhs == 50.0
+
+
+def test_evaluate_threshold_values_with_submetrics() -> None:
+    """evaluate_threshold_values handles source-string-keyed sub-values."""
+    threshold = Threshold(
+        source="avg<50",
+        expression=parse_threshold("avg<50"),
+    )
+    results = evaluate_threshold_values(
+        {"dur{status:200}": [threshold]},
+        {"dur": {"avg": 100.0, "count": 10.0}},
+        sub_values={"dur{status:200}": {"avg": 15.0, "count": 5.0}},
+    )
+    assert len(results) == 1
+    assert results[0].passed is True
+    assert results[0].lhs == 15.0
+
+
+def test_value_and_sink_evaluation_agree() -> None:
+    """evaluate_threshold_values matches evaluate_thresholds for same data."""
+    sink = CounterSink()
+    sink.add(50.0)
+
+    threshold = Threshold(
+        source="count>=100",
+        expression=parse_threshold("count>=100"),
+    )
+    mt: dict[str, list[Threshold]] = {"reqs": [threshold]}
+
+    sink_results = evaluate_thresholds(mt, {"reqs": sink}, 1.0)
+    value_results = evaluate_threshold_values(
+        mt,
+        {"reqs": sink.format(1.0)},
+    )
+
+    assert len(sink_results) == len(value_results)
+    for sr, vr in zip(sink_results, value_results, strict=True):
+        assert sr.passed == vr.passed
+        assert sr.lhs == vr.lhs
+        assert sr.rhs == vr.rhs

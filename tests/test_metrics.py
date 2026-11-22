@@ -15,6 +15,7 @@ from rampa.metrics import (
     MetricEngine,
     MetricRegistry,
     MetricSnapshot,
+    PythonMetricAggregationBackend,
     RateSink,
     TrendSink,
     register_builtins,
@@ -292,3 +293,174 @@ def test_metric_engine_on_snapshot_callback() -> None:
 
     assert len(received) > 0
     assert all(isinstance(s, MetricSnapshot) for s in received)
+
+
+# --- Sub-sink index tests ---
+
+
+def test_sub_sink_routes_to_correct_metric() -> None:
+    """Sub-sinks indexed by base metric receive only matching samples."""
+    reg = MetricRegistry()
+    reg.get_or_create("http_dur", MetricType.TREND)
+    reg.get_or_create("grpc_dur", MetricType.TREND)
+
+    http_sink = reg.get_or_create_sub_sink("http_dur", {"status": "200"})
+    grpc_sink = reg.get_or_create_sub_sink("grpc_dur", {"status": "200"})
+
+    assert http_sink is not None
+    assert grpc_sink is not None
+
+    q: queue.SimpleQueue[Sample | None] = queue.SimpleQueue()
+    engine = MetricEngine(registry=reg, sample_queue=q)
+    engine.start()
+
+    for _ in range(5):
+        q.put(Sample("http_dur", 10.0, time.monotonic_ns(), {"status": "200"}))
+    time.sleep(0.15)
+    engine.stop()
+
+    http_fmt = http_sink.format(1.0)
+    grpc_fmt = grpc_sink.format(1.0)
+    assert http_fmt["count"] == 5.0
+    assert grpc_fmt["count"] == 0.0
+
+
+def test_sub_sink_overlapping_tags_across_metrics() -> None:
+    """Sub-sinks with same tags on different metrics don't cross-contaminate."""
+    reg = MetricRegistry()
+    reg.get_or_create("metric_a", MetricType.COUNTER)
+    reg.get_or_create("metric_b", MetricType.COUNTER)
+
+    sink_a = reg.get_or_create_sub_sink("metric_a", {"env": "prod"})
+    sink_b = reg.get_or_create_sub_sink("metric_b", {"env": "prod"})
+
+    assert sink_a is not None
+    assert sink_b is not None
+
+    q: queue.SimpleQueue[Sample | None] = queue.SimpleQueue()
+    engine = MetricEngine(registry=reg, sample_queue=q)
+    engine.start()
+
+    q.put(Sample("metric_a", 1.0, time.monotonic_ns(), {"env": "prod"}))
+    q.put(Sample("metric_a", 1.0, time.monotonic_ns(), {"env": "prod"}))
+    q.put(Sample("metric_b", 1.0, time.monotonic_ns(), {"env": "prod"}))
+    time.sleep(0.15)
+    engine.stop()
+
+    assert sink_a.format(1.0)["count"] == 2.0
+    assert sink_b.format(1.0)["count"] == 1.0
+
+
+def test_sub_sink_multiple_filters_same_metric() -> None:
+    """Multiple sub-sinks on the same metric each receive correct samples."""
+    reg = MetricRegistry()
+    reg.get_or_create("http_dur", MetricType.TREND)
+
+    ok_sink = reg.get_or_create_sub_sink("http_dur", {"status": "200"})
+    err_sink = reg.get_or_create_sub_sink("http_dur", {"status": "500"})
+
+    assert ok_sink is not None
+    assert err_sink is not None
+
+    q: queue.SimpleQueue[Sample | None] = queue.SimpleQueue()
+    engine = MetricEngine(registry=reg, sample_queue=q)
+    engine.start()
+
+    for _ in range(3):
+        q.put(Sample("http_dur", 10.0, time.monotonic_ns(), {"status": "200"}))
+    q.put(Sample("http_dur", 50.0, time.monotonic_ns(), {"status": "500"}))
+    time.sleep(0.15)
+    engine.stop()
+
+    assert ok_sink.format(1.0)["count"] == 3.0
+    assert err_sink.format(1.0)["count"] == 1.0
+
+
+def test_sub_sinks_for_accessor() -> None:
+    """MetricRegistry.sub_sinks_for returns only sub-sinks for that metric."""
+    reg = MetricRegistry()
+    reg.get_or_create("dur", MetricType.TREND)
+    reg.get_or_create("reqs", MetricType.COUNTER)
+
+    reg.get_or_create_sub_sink("dur", {"status": "200"})
+    reg.get_or_create_sub_sink("dur", {"status": "500"})
+    reg.get_or_create_sub_sink("reqs", {"method": "GET"})
+
+    assert len(reg.sub_sinks_for("dur")) == 2
+    assert len(reg.sub_sinks_for("reqs")) == 1
+    assert len(reg.sub_sinks_for("nonexistent")) == 0
+
+
+def test_all_sub_sinks_by_metric() -> None:
+    """MetricRegistry.all_sub_sinks_by_metric returns indexed snapshot."""
+    reg = MetricRegistry()
+    reg.get_or_create("dur", MetricType.TREND)
+    reg.get_or_create("reqs", MetricType.COUNTER)
+
+    reg.get_or_create_sub_sink("dur", {"status": "200"})
+    reg.get_or_create_sub_sink("reqs", {"method": "GET"})
+
+    by_metric = reg.all_sub_sinks_by_metric()
+    assert "dur" in by_metric
+    assert "reqs" in by_metric
+    assert len(by_metric["dur"]) == 1
+    assert len(by_metric["reqs"]) == 1
+
+
+# --- PythonMetricAggregationBackend tests ---
+
+
+def test_python_backend_counter_ingest() -> None:
+    """PythonMetricAggregationBackend ingests counter samples."""
+    reg = MetricRegistry()
+    reg.get_or_create("reqs", MetricType.COUNTER)
+    backend = PythonMetricAggregationBackend(reg)
+
+    backend.ingest(Sample("reqs", 1.0, 0, {}))
+    backend.ingest(Sample("reqs", 2.0, 0, {}))
+
+    vals = backend.snapshot_values(10.0)
+    assert vals["reqs"]["count"] == 3.0
+    assert abs(vals["reqs"]["rate"] - 0.3) < 0.01
+
+
+def test_python_backend_sub_sink_routing() -> None:
+    """PythonMetricAggregationBackend routes to submetrics by source string."""
+    reg = MetricRegistry()
+    reg.get_or_create("dur", MetricType.COUNTER)
+    backend = PythonMetricAggregationBackend(reg)
+    backend.register_submetric("dur{status:200}", "dur", {"status": "200"})
+
+    backend.ingest(Sample("dur", 1.0, 0, {"status": "200"}))
+    backend.ingest(Sample("dur", 1.0, 0, {"status": "500"}))
+
+    sub_vals = backend.snapshot_sub_values(1.0)
+    assert "dur{status:200}" in sub_vals
+    assert sub_vals["dur{status:200}"]["count"] == 1.0
+
+
+def test_python_backend_batch_matches_individual() -> None:
+    """ingest_batch produces the same result as individual ingests."""
+    reg1 = MetricRegistry()
+    reg1.get_or_create("c", MetricType.COUNTER)
+    b1 = PythonMetricAggregationBackend(reg1)
+
+    reg2 = MetricRegistry()
+    reg2.get_or_create("c", MetricType.COUNTER)
+    b2 = PythonMetricAggregationBackend(reg2)
+
+    samples = [Sample("c", float(i), 0, {}) for i in range(10)]
+    for s in samples:
+        b1.ingest(s)
+    b2.ingest_batch(samples)
+
+    assert b1.snapshot_values(1.0) == b2.snapshot_values(1.0)
+
+
+def test_python_backend_register_metric() -> None:
+    """register_metric delegates to MetricRegistry."""
+    reg = MetricRegistry()
+    backend = PythonMetricAggregationBackend(reg)
+    backend.register_metric("new_metric", MetricType.GAUGE)
+
+    assert reg.get_sink("new_metric") is not None
